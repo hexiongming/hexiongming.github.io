@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>滤芯更换提醒</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "Microsoft YaHei", sans-serif;
+        }
+
+        body {
+            background-color: #f5f7fa;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        /* 顶部标题栏 */
+        .header {
+            background-color: #0078d7;
+            color: white;
+            padding: 15px 20px;
+            border-radius: 8px 8px 0 0;
+        }
+
+        .header h1 {
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .header p {
+            font-size: 14px;
+            margin-top: 5px;
+            opacity: 0.9;
+        }
+
+        /* 主卡片容器 */
+        .reminder-container {
+            background: white;
+            max-width: 500px;
+            margin: 0 auto;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+
+        /* 表单区域 */
+        .form-section {
+            padding: 20px;
+        }
+
+        .form-title {
+            font-size: 16px;
+            color: #333;
+            margin-bottom: 20px;
+            font-weight: 600;
+        }
+
+        .form-group {
+            margin-bottom: 20px; /* 统一所有表单项间距 */
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #555;
+            font-size: 14px;
+        }
+
+        input[type="date"] {
+            width: 100%;
+            padding: 12px 15px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 16px;
+            outline: none;
+            transition: border 0.3s;
+        }
+
+        input[type="date"]:focus {
+            border-color: #0078d7;
+        }
+
+        input[type="email"] {
+            width: 100%;
+            padding: 12px 15px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 16px;
+            outline: none;
+            transition: border 0.3s;
+        }
+
+        input[type="email"]:focus {
+            border-color: #0078d7;
+        }
+
+        .date-display {
+            padding: 12px 15px;
+            background-color: #f9f9f9;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            color: #0078d7;
+            font-size: 16px;
+            margin-top: 5px;
+        }
+
+        /* 按钮样式 - 新增禁用状态 */
+        .confirm-btn {
+            width: 100%;
+            padding: 14px;
+            background-color: #0078d7;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.3s;
+            margin-top: 10px;
+        }
+
+        .confirm-btn:hover {
+            background-color: #0066b8;
+        }
+
+        /* 禁用状态样式 */
+        .confirm-btn:disabled {
+            background-color: #cccccc;
+            color: #999999;
+            cursor: not-allowed;
+            pointer-events: none; /* 禁止点击事件 */
+        }
+
+        /* 提示消息 */
+        .message {
+            margin-top: 15px;
+            padding: 10px;
+            border-radius: 4px;
+            font-size: 14px;
+            text-align: center;
+            display: none;
+        }
+
+        .success {
+            background-color: #d4edda;
+            color: #155724;
+            display: block;
+        }
+
+        .error {
+            background-color: #f8d7da;
+            color: #721c24;
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="reminder-container">
+        <!-- 顶部标题栏 -->
+        <div class="header">
+            <h1>滤芯更换提醒</h1>
+            <p>简单记录，健康饮水</p>
+        </div>
+
+        <!-- 表单区域 -->
+        <div class="form-section">
+            <div class="form-title">设置换芯提醒</div>
+
+            <!-- 安装日期选择 -->
+            <div class="form-group">
+                <label for="installDate">安装日期</label>
+                <input type="date" id="installDate" required>
+            </div>
+
+            <!-- 自动计算的更换日期 -->
+            <div class="form-group">
+                <label>预计更换日期</label>
+                <div id="remindDateDisplay" class="date-display">请先选择安装日期</div>
+            </div>
+
+            <!-- 邮箱输入（选填） -->
+            <div class="form-group">
+                <label for="userEmail">接收邮箱（选填）</label>
+                <input type="email" id="userEmail" placeholder="填写后可同步接收邮件提醒">
+            </div>
+
+            <!-- 确认按钮 - 初始禁用 -->
+            <button class="confirm-btn" id="confirmBtn" disabled onclick="setReminder()">确认设置提醒</button>
+
+            <!-- 提示消息 -->
+            <div id="messageBox" class="message"></div>
+        </div>
+    </div>
+
+    <script>
+        // 获取确认按钮元素
+        const confirmBtn = document.getElementById('confirmBtn');
+        const installDateInput = document.getElementById('installDate');
+        const messageBox = document.getElementById('messageBox');
+
+        // 格式化日期为YYYY/MM/DD的工具函数
+        const formatDate = (date) => {
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            return `${year}/${month}/${day}`;
+        };
+
+        // 初始化：设置安装日期默认值为系统当前日期
+        function initDefaultDate() {
+            // 获取当前日期并格式化为YYYY-MM-DD（date输入框要求的格式）
+            const today = new Date();
+            const year = today.getFullYear();
+            const month = String(today.getMonth() + 1).padStart(2, '0');
+            const day = String(today.getDate()).padStart(2, '0');
+            const defaultDate = `${year}-${month}-${day}`;
+
+            // 设置默认日期
+            installDateInput.value = defaultDate;
+            
+            // 手动触发change事件，自动计算提醒日期并启用按钮
+            installDateInput.dispatchEvent(new Event('change'));
+        }
+
+        // 页面加载完成后初始化默认日期
+        window.onload = initDefaultDate;
+
+        // 监听安装日期选择，自动计算一年后的提醒日期 + 控制按钮状态 + 日期有效性校验
+        installDateInput.addEventListener('change', function() {
+            const installDateStr = this.value;
+            // 清空之前的提示
+            messageBox.className = 'message';
+            
+            // 控制按钮禁用/启用状态（基础判断）
+            confirmBtn.disabled = !installDateStr;
+
+            if (!installDateStr) {
+                document.getElementById('remindDateDisplay').textContent = '请先选择安装日期';
+                window.remindDate = null;
+                return;
+            }
+
+            // 转换为Date对象，计算一年后日期
+            const installDate = new Date(installDateStr);
+            const remindDate = new Date(installDate);
+            remindDate.setFullYear(installDate.getFullYear() + 1);
+            
+            // 获取当前日期（仅保留年月日，去掉时分秒）
+            const today = new Date();
+            const todayOnlyDate = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+            // 格式化当前日期用于提示
+            const todayFormatted = formatDate(todayOnlyDate);
+            
+            // 校验预计更换日期是否有效（需大于今天）
+            const remindDateOnlyDate = new Date(remindDate.getFullYear(), remindDate.getMonth(), remindDate.getDate());
+            if (remindDateOnlyDate <= todayOnlyDate) {
+                // 日期无效：更新显示 + 显示错误提示 + 禁用按钮
+                document.getElementById('remindDateDisplay').textContent = formatDate(remindDate);
+                showMessage(`日期选择无效，预计更换日期需在${todayFormatted}之后。`, 'error');
+                confirmBtn.disabled = true;
+                window.remindDate = null;
+                return;
+            }
+
+            // 日期有效：更新显示 + 启用按钮
+            const remindDateFormatted = formatDate(remindDate);
+            document.getElementById('remindDateDisplay').textContent = remindDateFormatted;
+            confirmBtn.disabled = false;
+
+            // 存储提醒日期（供后续生成日历使用）
+            window.remindDate = remindDate;
+        });
+
+        /**
+         * 核心：设置滤芯更换提醒，生成ICS日历文件
+         */
+        function setReminder() {
+            const installDate = installDateInput.value;
+            const userEmail = document.getElementById('userEmail').value.trim();
+
+            // 1. 验证安装日期是否选择（兜底验证）
+            if (!installDate) {
+                showMessage('请先选择滤芯安装日期！', 'error');
+                return;
+            }
+
+            // 2. 验证邮箱格式（如果填写）
+            if (userEmail && !validateEmail(userEmail)) {
+                showMessage('请输入正确的邮箱格式！', 'error');
+                return;
+            }
+
+            // 3. 获取提醒日期（已在change事件中计算）
+            const remindDate = window.remindDate;
+            if (!remindDate) {
+                const today = formatDate(new Date());
+                showMessage(`日期选择无效，预计更换日期需在${today}之后。`, 'error');
+                return;
+            }
+
+            // 4. 格式化日历文件所需的时间格式（UTC时间，ICS标准）
+            const icsTime = formatICSTime(remindDate);
+
+            // 5. 生成标准ICS日历文件内容
+            const icsContent = `
+BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//Filter Reminder//CN
+BEGIN:VEVENT
+UID:${Date.now()}@filter-reminder.com
+DTSTART:${icsTime}
+DTEND:${icsTime}
+SUMMARY:滤芯已到期，请及时更换滤芯
+DESCRIPTION:您设置的滤芯已到期（安装日期：${installDate.replace(/-/g, '/')}），请尽快更换滤芯，保障饮水健康。
+${userEmail ? 'ATTENDEE:MAILTO:' + userEmail : ''}
+BEGIN:VALARM
+TRIGGER:-PT0M
+DESCRIPTION:滤芯更换提醒
+ACTION:DISPLAY
+END:VALARM
+END:VEVENT
+END:VCALENDAR
+            `.trim().replace(/\n/g, '\r\n');
+
+            // 6. 生成并下载ICS文件，触发系统日历导入
+            const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `滤芯更换提醒_${formatDate(remindDate)}.ics`;
+            a.click();
+            URL.revokeObjectURL(url);
+
+            // 7. 显示成功提示
+            showMessage(`提醒设置成功！将在${formatDate(remindDate)}提醒您更换滤芯`, 'success');
+        }
+
+        /**
+         * 辅助函数：格式化时间为ICS标准格式（YYYYMMDDTHHMMSSZ）
+         */
+        function formatICSTime(date) {
+            return date.getUTCFullYear() +
+                String(date.getUTCMonth() + 1).padStart(2, '0') +
+                String(date.getUTCDate()).padStart(2, '0') +
+                'T' +
+                String(date.getUTCHours()).padStart(2, '0') +
+                String(date.getUTCMinutes()).padStart(2, '0') +
+                '00Z';
+        }
+
+        /**
+         * 辅助函数：验证邮箱格式
+         */
+        function validateEmail(email) {
+            const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            return re.test(email);
+        }
+
+        /**
+         * 辅助函数：显示提示消息
+         */
+        function showMessage(text, type) {
+            messageBox.textContent = text;
+            messageBox.className = 'message ' + type;
+            
+            // 3秒后自动隐藏
+            setTimeout(() => {
+                messageBox.className = 'message';
+            }, 3000);
+        }
+    </script>
+</body>
+</html>
