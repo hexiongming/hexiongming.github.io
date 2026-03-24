@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="apple-mobile-web-app-capable" content="yes">
     <title>滤芯更换提醒</title>
     <style>
         * {
@@ -18,7 +19,6 @@
             padding: 20px;
         }
 
-        /* 顶部标题栏 */
         .header {
             background-color: #0078d7;
             color: white;
@@ -37,7 +37,6 @@
             opacity: 0.9;
         }
 
-        /* 主卡片容器 */
         .reminder-container {
             background: white;
             max-width: 500px;
@@ -47,7 +46,6 @@
             overflow: hidden;
         }
 
-        /* 表单区域 */
         .form-section {
             padding: 20px;
         }
@@ -60,7 +58,7 @@
         }
 
         .form-group {
-            margin-bottom: 20px; /* 统一所有表单项间距 */
+            margin-bottom: 20px;
         }
 
         label {
@@ -108,7 +106,6 @@
             margin-top: 5px;
         }
 
-        /* 按钮样式 - 新增禁用状态 */
         .confirm-btn {
             width: 100%;
             padding: 14px;
@@ -127,15 +124,13 @@
             background-color: #0066b8;
         }
 
-        /* 禁用状态样式 */
         .confirm-btn:disabled {
             background-color: #cccccc;
             color: #999999;
             cursor: not-allowed;
-            pointer-events: none; /* 禁止点击事件 */
+            pointer-events: none;
         }
 
-        /* 提示消息 */
         .message {
             margin-top: 15px;
             padding: 10px;
@@ -154,55 +149,65 @@
         .error {
             background-color: #f8d7da;
             color: #721c24;
-            display: block;
+            display: block; /* 错误提示默认持续显示 */
+        }
+
+        .tip-box {
+            margin-top: 15px;
+            padding: 10px;
+            border-radius: 4px;
+            font-size: 13px;
+            color: #666;
+            background-color: #f9f9f9;
+            border: 1px solid #eee;
         }
     </style>
 </head>
 <body>
     <div class="reminder-container">
-        <!-- 顶部标题栏 -->
         <div class="header">
             <h1>滤芯更换提醒</h1>
             <p>简单记录，健康饮水</p>
         </div>
 
-        <!-- 表单区域 -->
         <div class="form-section">
             <div class="form-title">设置换芯提醒</div>
 
-            <!-- 安装日期选择 -->
             <div class="form-group">
                 <label for="installDate">安装日期</label>
                 <input type="date" id="installDate" required>
             </div>
 
-            <!-- 自动计算的更换日期 -->
             <div class="form-group">
                 <label>预计更换日期</label>
                 <div id="remindDateDisplay" class="date-display">请先选择安装日期</div>
             </div>
 
-            <!-- 邮箱输入（选填） -->
             <div class="form-group">
                 <label for="userEmail">接收邮箱（选填）</label>
                 <input type="email" id="userEmail" placeholder="填写后可同步接收邮件提醒">
             </div>
 
-            <!-- 确认按钮 - 初始禁用 -->
             <button class="confirm-btn" id="confirmBtn" disabled onclick="setReminder()">确认设置提醒</button>
 
-            <!-- 提示消息 -->
             <div id="messageBox" class="message"></div>
+            
+            <!-- 环境提示 -->
+            <div class="tip-box">
+                <strong>温馨提示：</strong><br>
+                1. 本地/自有服务器打开可直接唤起日历；<br>
+                2. CodePen环境仅支持下载ICS文件导入日历；<br>
+                3. 微信内请复制链接到系统浏览器打开。
+            </div>
         </div>
     </div>
 
     <script>
-        // 获取确认按钮元素
         const confirmBtn = document.getElementById('confirmBtn');
         const installDateInput = document.getElementById('installDate');
         const messageBox = document.getElementById('messageBox');
 
-        // 格式化日期为YYYY/MM/DD的工具函数
+        // 格式化日期为YYYY/MM/DD
         const formatDate = (date) => {
             const year = date.getFullYear();
             const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -210,32 +215,26 @@
             return `${year}/${month}/${day}`;
         };
 
-        // 初始化：设置安装日期默认值为系统当前日期
+        // 初始化默认日期
         function initDefaultDate() {
-            // 获取当前日期并格式化为YYYY-MM-DD（date输入框要求的格式）
             const today = new Date();
             const year = today.getFullYear();
             const month = String(today.getMonth() + 1).padStart(2, '0');
             const day = String(today.getDate()).padStart(2, '0');
             const defaultDate = `${year}-${month}-${day}`;
-
-            // 设置默认日期
             installDateInput.value = defaultDate;
-            
-            // 手动触发change事件，自动计算提醒日期并启用按钮
             installDateInput.dispatchEvent(new Event('change'));
         }
 
-        // 页面加载完成后初始化默认日期
-        window.onload = initDefaultDate;
-
-        // 监听安装日期选择，自动计算一年后的提醒日期 + 控制按钮状态 + 日期有效性校验
+        // 监听日期选择
         installDateInput.addEventListener('change', function() {
             const installDateStr = this.value;
-            // 清空之前的提示
-            messageBox.className = 'message';
             
-            // 控制按钮禁用/启用状态（基础判断）
+            // 只有选择有效日期时才清空错误提示
+            if (installDateStr) {
+                messageBox.className = 'message';
+            }
+            
             confirmBtn.disabled = !installDateStr;
 
             if (!installDateStr) {
@@ -244,104 +243,132 @@
                 return;
             }
 
-            // 转换为Date对象，计算一年后日期
             const installDate = new Date(installDateStr);
             const remindDate = new Date(installDate);
             remindDate.setFullYear(installDate.getFullYear() + 1);
             
-            // 获取当前日期（仅保留年月日，去掉时分秒）
             const today = new Date();
             const todayOnlyDate = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-            // 格式化当前日期用于提示
             const todayFormatted = formatDate(todayOnlyDate);
             
-            // 校验预计更换日期是否有效（需大于今天）
             const remindDateOnlyDate = new Date(remindDate.getFullYear(), remindDate.getMonth(), remindDate.getDate());
             if (remindDateOnlyDate <= todayOnlyDate) {
-                // 日期无效：更新显示 + 显示错误提示 + 禁用按钮
                 document.getElementById('remindDateDisplay').textContent = formatDate(remindDate);
-                showMessage(`日期选择无效，预计更换日期需在${todayFormatted}之后。`, 'error');
+                // 显示错误提示，且不设置自动消失
+                showMessage(`日期选择无效，预计更换日期需在${todayFormatted}之后。`, 'error', false);
                 confirmBtn.disabled = true;
                 window.remindDate = null;
                 return;
             }
 
-            // 日期有效：更新显示 + 启用按钮
+            // 选择有效日期：清空错误提示 + 启用按钮
+            messageBox.className = 'message';
             const remindDateFormatted = formatDate(remindDate);
             document.getElementById('remindDateDisplay').textContent = remindDateFormatted;
             confirmBtn.disabled = false;
-
-            // 存储提醒日期（供后续生成日历使用）
             window.remindDate = remindDate;
         });
 
         /**
-         * 核心：设置滤芯更换提醒，生成ICS日历文件
+         * 核心：适配不同环境的日历唤起逻辑
          */
         function setReminder() {
             const installDate = installDateInput.value;
             const userEmail = document.getElementById('userEmail').value.trim();
 
-            // 1. 验证安装日期是否选择（兜底验证）
             if (!installDate) {
-                showMessage('请先选择滤芯安装日期！', 'error');
+                showMessage('请先选择滤芯安装日期！', 'error', false);
                 return;
             }
 
-            // 2. 验证邮箱格式（如果填写）
             if (userEmail && !validateEmail(userEmail)) {
-                showMessage('请输入正确的邮箱格式！', 'error');
+                showMessage('请输入正确的邮箱格式！', 'error', false);
                 return;
             }
 
-            // 3. 获取提醒日期（已在change事件中计算）
             const remindDate = window.remindDate;
             if (!remindDate) {
                 const today = formatDate(new Date());
-                showMessage(`日期选择无效，预计更换日期需在${today}之后。`, 'error');
+                showMessage(`日期选择无效，预计更换日期需在${today}之后。`, 'error', false);
                 return;
             }
 
-            // 4. 格式化日历文件所需的时间格式（UTC时间，ICS标准）
-            const icsTime = formatICSTime(remindDate);
+            // 1. 生成iOS/安卓原生日历唤起链接（仅本地/自有服务器生效）
+            const remindDateFormatted = formatDate(remindDate);
+            const eventTitle = encodeURIComponent('滤芯更换提醒');
+            const eventDesc = encodeURIComponent(`安装日期：${installDate.replace(/-/g, '/')}，更换日期：${remindDateFormatted}`);
+            const eventStart = `${remindDate.getFullYear()}${String(remindDate.getMonth()+1).padStart(2,'0')}${String(remindDate.getDate()).padStart(2,'0')}T090000`;
+            const eventEnd = `${remindDate.getFullYear()}${String(remindDate.getMonth()+1).padStart(2,'0')}${String(remindDate.getDate()).padStart(2,'0')}T100000`;
 
-            // 5. 生成标准ICS日历文件内容
-            const icsContent = `
-BEGIN:VCALENDAR
+            // iOS日历唤起链接
+            const iosCalendarUrl = `calshow:${remindDate.getFullYear()}-${String(remindDate.getMonth()+1).padStart(2,'0')}-${String(remindDate.getDate()).padStart(2,'0')}?title=${eventTitle}&description=${eventDesc}`;
+            // 通用日历链接（安卓/电脑）
+            const webCalendarUrl = `data:text/calendar;charset=utf-8,BEGIN:VCALENDAR%0AVERSION:2.0%0ABEGIN:VEVENT%0ASUMMARY:${eventTitle}%0ADESCRIPTION:${eventDesc}%0ADTSTART:${eventStart}%0ADTEND:${eventEnd}%0AEND:VEVENT%0AEND:VCALENDAR`;
+
+            // 2. 判断环境并执行
+            if (isIOS() && !isCodePenEnv()) {
+                // iOS+非CodePen：直接唤起日历App
+                window.location.href = iosCalendarUrl;
+                showMessage(`已唤起系统日历，将在${remindDateFormatted}提醒您更换滤芯`, 'success', true);
+            } else if (!isCodePenEnv()) {
+                // 安卓+非CodePen：直接打开日历链接
+                window.location.href = webCalendarUrl;
+                showMessage(`已唤起系统日历，将在${remindDateFormatted}提醒您更换滤芯`, 'success', true);
+            } else {
+                // CodePen环境：降级为下载ICS文件
+                generateICSFile(remindDate, installDate, userEmail);
+                showMessage(`CodePen环境仅支持下载文件，已为您下载ICS文件，请导入日历！`, 'success', true);
+            }
+        }
+
+        // 检测是否为CodePen环境
+        function isCodePenEnv() {
+            return window.location.host.includes('codepen.io');
+        }
+
+        // 检测是否为iOS设备
+        function isIOS() {
+            const ua = navigator.userAgent.toLowerCase();
+            return ua.includes('iphone') || ua.includes('ipad') || ua.includes('ipod');
+        }
+
+        // 生成ICS文件（CodePen降级方案）
+        function generateICSFile(remindDate, installDate, userEmail) {
+            const icsTime = formatICSTime(remindDate);
+            const installDateFormatted = installDate.replace(/-/g, '/');
+            const remindDateFormatted = formatDate(remindDate);
+
+            const icsContent = `BEGIN:VCALENDAR
 VERSION:2.0
-PRODID:-//Filter Reminder//CN
+PRODID:-//Filter Reminder//CN//ZH
+CALSCALE:GREGORIAN
 BEGIN:VEVENT
-UID:${Date.now()}@filter-reminder.com
+UID:${Date.now()}-filter-reminder
+DTSTAMP:${formatICSTime(new Date())}
 DTSTART:${icsTime}
 DTEND:${icsTime}
-SUMMARY:滤芯已到期，请及时更换滤芯
-DESCRIPTION:您设置的滤芯已到期（安装日期：${installDate.replace(/-/g, '/')}），请尽快更换滤芯，保障饮水健康。
+SUMMARY:滤芯更换提醒
+DESCRIPTION:${installDateFormatted}安装的滤芯需在${remindDateFormatted}更换
 ${userEmail ? 'ATTENDEE:MAILTO:' + userEmail : ''}
+PRIORITY:1
 BEGIN:VALARM
 TRIGGER:-PT0M
-DESCRIPTION:滤芯更换提醒
 ACTION:DISPLAY
+DESCRIPTION:滤芯更换提醒
 END:VALARM
 END:VEVENT
-END:VCALENDAR
-            `.trim().replace(/\n/g, '\r\n');
+END:VCALENDAR`.replace(/\n/g, '\r\n');
 
-            // 6. 生成并下载ICS文件，触发系统日历导入
             const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `滤芯更换提醒_${formatDate(remindDate)}.ics`;
+            a.download = `滤芯更换提醒_${remindDateFormatted.replace(/\//g, '_')}.ics`;
             a.click();
             URL.revokeObjectURL(url);
-
-            // 7. 显示成功提示
-            showMessage(`提醒设置成功！将在${formatDate(remindDate)}提醒您更换滤芯`, 'success');
         }
 
-        /**
-         * 辅助函数：格式化时间为ICS标准格式（YYYYMMDDTHHMMSSZ）
-         */
+        // 格式化ICS时间
         function formatICSTime(date) {
             return date.getUTCFullYear() +
                 String(date.getUTCMonth() + 1).padStart(2, '0') +
@@ -352,26 +379,33 @@ END:VCALENDAR
                 '00Z';
         }
 
-        /**
-         * 辅助函数：验证邮箱格式
-         */
+        // 验证邮箱
         function validateEmail(email) {
             const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
             return re.test(email);
         }
 
         /**
-         * 辅助函数：显示提示消息
+         * 优化版提示函数：新增autoHide参数控制是否自动消失
+         * @param {string} text - 提示文本
+         * @param {string} type - success/error
+         * @param {boolean} autoHide - 是否自动消失（默认true）
          */
-        function showMessage(text, type) {
+        function showMessage(text, type, autoHide = true) {
             messageBox.textContent = text;
-            messageBox.className = 'message ' + type;
+            messageBox.className = `message ${type}`;
             
-            // 3秒后自动隐藏
-            setTimeout(() => {
-                messageBox.className = 'message';
-            }, 3000);
+            // 只有非错误提示/需要自动消失时，才设置定时清空
+            if (autoHide && type !== 'error') {
+                setTimeout(() => {
+                    messageBox.className = 'message';
+                }, 5000);
+            }
+            // 错误提示（尤其是日期无效）不自动消失，直到用户重新选择有效日期
         }
+
+        // 初始化
+        window.onload = initDefaultDate;
     </script>
 </body>
 </html>
