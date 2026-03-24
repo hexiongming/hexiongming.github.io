@@ -149,17 +149,7 @@
         .error {
             background-color: #f8d7da;
             color: #721c24;
-            display: block; /* 错误提示默认持续显示 */
-        }
-
-        .tip-box {
-            margin-top: 15px;
-            padding: 10px;
-            border-radius: 4px;
-            font-size: 13px;
-            color: #666;
-            background-color: #f9f9f9;
-            border: 1px solid #eee;
+            display: block;
         }
     </style>
 </head>
@@ -191,14 +181,6 @@
             <button class="confirm-btn" id="confirmBtn" disabled onclick="setReminder()">确认设置提醒</button>
 
             <div id="messageBox" class="message"></div>
-            
-            <!-- 环境提示 -->
-            <div class="tip-box">
-                <strong>温馨提示：</strong><br>
-                1. 本地/自有服务器打开可直接唤起日历；<br>
-                2. CodePen环境仅支持下载ICS文件导入日历；<br>
-                3. 微信内请复制链接到系统浏览器打开。
-            </div>
         </div>
     </div>
 
@@ -317,7 +299,7 @@
             } else {
                 // CodePen环境：降级为下载ICS文件
                 generateICSFile(remindDate, installDate, userEmail);
-                showMessage(`CodePen环境仅支持下载文件，已为您下载ICS文件，请导入日历！`, 'success', true);
+                showMessage(`已为您下载ICS文件，请导入日历！`, 'success', true);
             }
         }
 
