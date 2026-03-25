@@ -80,7 +80,6 @@
             transition: border 0.3s;
         }
 
-        /* 邮箱后缀下拉框样式 */
         .email-suggest {
             position: absolute;
             width: 100%;
@@ -223,7 +222,6 @@
     </div>
 
     <script>
-        // 多语言
         const isEnglish = navigator.language.toLowerCase().includes('en');
         const i18n = {
             pageTitle: isEnglish ? 'Filter Replacement Reminder' : '滤芯更换提醒',
@@ -243,7 +241,6 @@
             errorEmail: isEnglish ? 'Invalid email' : '邮箱格式错误'
         };
 
-        // 应用语言
         document.getElementById('pageTitle').innerText = i18n.pageTitle;
         document.getElementById('pageDesc').innerText = i18n.pageDesc;
         document.getElementById('formTitle').innerText = i18n.formTitle;
@@ -255,15 +252,12 @@
         document.getElementById('confirmBtn').innerText = i18n.confirmBtn;
         document.getElementById('remindDateDisplay').innerText = i18n.selectDate;
 
-        // 下拉框语言
         const sel = document.getElementById('remindDays');
         Array.from(sel.options).forEach(o => o.textContent = isEnglish ? o.dataset.en : o.dataset.cn);
 
-        // 工具
         const formatDate = d => `${d.getFullYear()}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')}`;
         const pad = n => String(n).padStart(2, '0');
 
-        // DOM
         const confirmBtn = document.getElementById('confirmBtn');
         const installDateInput = document.getElementById('installDate');
         const remindDateDisplay = document.getElementById('remindDateDisplay');
@@ -272,17 +266,14 @@
         const userEmailInput = document.getElementById('userEmail');
         const remindDaysSelect = document.getElementById('remindDays');
         const emailSuggest = document.getElementById('emailSuggest');
-        // 已增加 GOOGLE 邮箱
-        const commonDomains = ['gmail.com', 'google.com', 'googlemail.com', 'yahoo.com', 'hotmail.com', 'outlook.com', 'icloud.com', 'qq.com', '163.com', '126.com', 'sina.com', 'sohu.com'];
+        const commonDomains = ['gmail.com','googlemail.com','yahoo.com','hotmail.com','outlook.com','icloud.com','qq.com','163.com','126.com','sina.com','sohu.com'];
 
-        // 初始化
         function initDefaultDate() {
             const d = new Date();
             installDateInput.value = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
             installDateInput.dispatchEvent(new Event('change'));
         }
 
-        // 日期选择
         installDateInput.addEventListener('change', function () {
             const val = this.value;
             messageBox.className = 'message';
@@ -316,7 +307,6 @@
             window.remindDate = expire;
         });
 
-        // 邮箱后缀自动提示
         userEmailInput.addEventListener('input', function(e) {
             const val = this.value;
             const atIndex = val.indexOf('@');
@@ -344,7 +334,7 @@
             }
         });
 
-// 核心：日历唤起（安卓终极通用方案，100%跳转）
+// ====================== 安卓终极方案：直接跳日历编辑页面（不下载ICS） ======================
 function setReminder() {
     const rd = window.remindDate;
     const email = userEmailInput.value.trim();
@@ -379,38 +369,16 @@ END:VCALENDAR`;
         return;
     }
 
-    // ====================== 安卓终极方案：全机型必跳日历 ======================
-    try {
-        // 生成标准日历事件
-        const icsContent = `BEGIN:VCALENDAR
-VERSION:2.0
-BEGIN:VEVENT
-UID:${Date.now()}
-DTSTART:${y}${m}${d}T090000
-DTEND:${y}${m}${d}T100000
-SUMMARY:${title}
-END:VEVENT
-END:VCALENDAR`;
-        
-        // 生成 base64 日历数据，直接唤起系统日历（不下载文件）
-        const base64 = btoa(unescape(encodeURIComponent(icsContent)));
-        const dataUrl = `data:text/calendar;base64,${base64}`;
-        
-        // 安全唤起（安卓全系统支持）
-        setTimeout(() => {
-            const a = document.createElement('a');
-            a.href = dataUrl;
-            a.target = '_blank';
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-        }, 100);
-    } catch (e) {}
+    // -------------------- 安卓：Google 日历官方标准链接（全球通用，直接跳转新建页面） --------------------
+    const startDate = `${y}-${m}-${d}`;
+    const gCalUrl = `https://calendar.google.com/calendar/r/eventedit?text=${encodeURIComponent(title)}&dates=${y}${m}${d}/${y}${m}${d}`;
+    
+    // 直接打开，不下载ICS，不闪退
+    window.open(gCalUrl, '_blank');
 
     showMessage(`${i18n.success}：${formatDate(rd)}`, 'success');
 }
 
-        // 提示
         function showMessage(text, type) {
             messageBox.textContent = text;
             messageBox.className = `message ${type}`;
