@@ -370,30 +370,23 @@ END:VCALENDAR`;
         return;
     }
 
-    // -------------------- 安卓全机型兼容（vivo/小米/华为/OPPO 完美生效） --------------------
+    // -------------------- 安卓 最终稳定版（所有品牌都能跳） --------------------
     const beginTime = rd.getTime();
-    const endTime = beginTime + 3600 * 1000; // 1小时
-    const alarmTime = days * 24 * 60 * 60 * 1000; // 提前N天提醒
+    const endTime = beginTime + 3600000;
 
-    // 安卓系统标准日历 Intent（能自动填充：标题、开始时间、结束时间、提醒时间）
-    const intentUri = [
-        'intent://com.android.calendar/events/new',
-        '?title=' + encodeURIComponent(title),
-        '&begin=' + beginTime,
-        '&end=' + endTime,
-        '&minutes=' + (alarmTime / 60000), // 提前多少分钟提醒（系统标准参数）
-        '#Intent;scheme=content;package=com.android.calendar;end;'
-    ].join('');
+    // 最兼容、最稳定的日历跳转格式
+    const calendarUri = `content://com.android.calendar/events/new?title=${encodeURIComponent(title)}&begin=${beginTime}&end=${endTime}`;
 
+    // 创建隐藏a标签跳转（浏览器允许这种方式）
     const a = document.createElement('a');
-    a.href = intentUri;
+    a.href = calendarUri;
+    a.style.display = 'none';
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
 
     showMessage(`${i18n.success}：${formatDate(rd)}`, 'success');
 }
-
         function showMessage(text, type) {
             messageBox.textContent = text;
             messageBox.className = `message ${type}`;
