@@ -232,6 +232,7 @@
         // 工具
         const formatDate = d => `${d.getFullYear()}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')}`;
         const pad = n => String(n).padStart(2, '0');
+        const formatDT = d => `${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}`;
 
         // DOM
         const confirmBtn = document.getElementById('confirmBtn');
@@ -283,69 +284,69 @@
             window.remindDate = expire;
         });
 
-// 核心：日历唤起（iOS + Android 都能自动创建事件）
-function setReminder() {
-    const rd = window.remindDate;
-    const email = userEmailInput.value.trim();
-    const days = parseInt(remindDaysSelect.value);
+        // 核心：日历唤起（iOS + Android 都能自动创建事件）
+        function setReminder() {
+            const rd = window.remindDate;
+            const email = userEmailInput.value.trim();
+            const days = parseInt(remindDaysSelect.value);
+            const ua = navigator.userAgent.toLowerCase();
 
-    if (!rd) { showMessage(i18n.selectDate, 'error'); return; }
-    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { showMessage(i18n.errorEmail, 'error'); return; }
-    if (navigator.userAgent.toLowerCase().includes('micromessenger')) { wechatTip.innerText = i18n.wechatTip; wechatTip.style.display = 'block'; return; }
+            if (!rd) { showMessage(i18n.selectDate, 'error'); return; }
+            if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { showMessage(i18n.errorEmail, 'error'); return; }
+            if (ua.includes('micromessenger')) { wechatTip.innerText = i18n.wechatTip; wechatTip.style.display = 'block'; return; }
 
-    const y = rd.getFullYear(), m = pad(rd.getMonth()+1), d = pad(rd.getDate());
-    const title = isEnglish ? "Filter Replacement" : "滤芯更换提醒";
-    const startTime = rd.getTime();
+            const y = rd.getFullYear(), m = pad(rd.getMonth()+1), d = pad(rd.getDate());
+            const dateStr = formatDT(rd);
+            const title = isEnglish ? "Filter Replacement" : "滤芯更换提醒";
+            const startTime = rd.getTime();
 
-    // -------------------- iOS --------------------
-    if (/iphone|ipad/.test(navigator.userAgent.toLowerCase())) {
-        const ics = `BEGIN:VCALENDAR
+            // -------------------- iOS --------------------
+            if (/iphone|ipad|ipod/.test(ua)) {
+                const ics = `BEGIN:VCALENDAR
 VERSION:2.0
+PRODID:-//Filter Reminder//CN
 BEGIN:VEVENT
-UID:${Date.now()}
-DTSTART:${y}${m}${d}T090000
-DTEND:${y}${m}${d}T100000
+UID:filter-${Date.now()}
+DTSTART:${dateStr}T090000
+DTEND:${dateStr}T100000
 SUMMARY:${title}
 BEGIN:VALARM
 TRIGGER:-P${days}D
 END:VALARM
 END:VEVENT
 END:VCALENDAR`;
-        const blob = new Blob([ics], { type: 'text/calendar' });
-        const url = URL.createObjectURL(blob);
-        window.location.href = url;
-        setTimeout(() => URL.revokeObjectURL(url), 500);
-        showMessage(`${i18n.success}：${formatDate(rd)}`, 'success');
-        return;
-    }
+                const blob = new Blob([ics], { type: 'text/calendar;charset=utf-8' });
+                const url = URL.createObjectURL(blob);
+                
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'filter-reminder.ics';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                
+                setTimeout(() => URL.revokeObjectURL(url), 1000);
+                showMessage(`${i18n.success}：${formatDate(rd)}`, 'success');
+                return;
+            }
 
-    // -------------------- 安卓全机型兼容 --------------------
-    const androidIntents = [
-        `intent://com.android.calendar/events/#Intent;action=android.intent.action.INSERT;type=vnd.android.cursor.item/event;title=${encodeURIComponent(title)};dtstart=${startTime};end`,
-        `intent://com.miui.calendar/#Intent;action=android.intent.action.INSERT;type=vnd.android.cursor.item/event;title=${encodeURIComponent(title)};dtstart=${startTime};end`,
-        `intent://com.huawei.calendar/#Intent;action=android.intent.action.INSERT;type=vnd.android.cursor.item/event;title=${encodeURIComponent(title)};dtstart=${startTime};end`,
-        `intent://com.oppo.calendar/#Intent;action=android.intent.action.INSERT;type=vnd.android.cursor.item/event;title=${encodeURIComponent(title)};dtstart=${startTime};end`,
-        `intent://com.vivo.calendar/#Intent;action=android.intent.action.INSERT;type=vnd.android.cursor.item/event;title=${encodeURIComponent(title)};dtstart=${startTime};end`,
-        `intent://com.samsung.android.calendar/#Intent;action=android.intent.action.INSERT;type=vnd.android.cursor.item/event;title=${encodeURIComponent(title)};dtstart=${startTime};end`
-    ];
-
-    for (let uri of androidIntents) {
-        let a = document.createElement('a');
-        a.href = uri;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-    }
-
-    showMessage(`${i18n.success}：${formatDate(rd)}`, 'success');
-}
+            // -------------------- 安卓全机型兼容 --------------------
+            const androidIntent = `intent:#Intent;action=android.intent.action.INSERT;type=vnd.android.cursor.item/event;title=${encodeURIComponent(title)};beginTime=${startTime};endTime=${startTime+3600000};S.description=${encodeURIComponent(title)};end`;
+            try {
+                window.location.href = androidIntent;
+            } catch(e) {}
+            
+            showMessage(`${i18n.success}：${formatDate(rd)}`, 'success');
+        }
 
         // 提示
         function showMessage(text, type) {
             messageBox.textContent = text;
             messageBox.className = `message ${type}`;
             wechatTip.style.display = 'none';
-            if (type === 'error') setTimeout(() => messageBox.className = 'message', 4000);
+            setTimeout(() => {
+                if(type === 'error') messageBox.className = 'message';
+            }, 4000);
         }
 
         window.onload = initDefaultDate;
