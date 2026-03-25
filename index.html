@@ -208,7 +208,7 @@
             selectDate: isEnglish ? 'Please select install date first' : '请先选择安装日期',
             dateInvalid: isEnglish ? 'Expiration date must be after today' : '更换日期必须晚于今天',
             wechatTip: isEnglish ? 'Open in system browser' : '微信无法调用日历，请在浏览器中打开',
-            success: isEnglish ? '✅ Calendar reminder created' : '✅ 日历提醒已生成',
+            success: isEnglish ? '✅ Calendar opened' : '✅ 已打开系统日历，直接保存即可',
             errorDate: isEnglish ? 'Select valid date' : '请选择有效日期',
             errorEmail: isEnglish ? 'Invalid email' : '邮箱格式错误'
         };
@@ -232,7 +232,6 @@
         // 工具
         const formatDate = d => `${d.getFullYear()}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')}`;
         const pad = n => String(n).padStart(2, '0');
-        const formatDT = d => `${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}`;
 
         // DOM
         const confirmBtn = document.getElementById('confirmBtn');
@@ -284,7 +283,7 @@
             window.remindDate = expire;
         });
 
-        // 核心：日历唤起（iOS + Android 都能自动创建事件）
+        // 全平台唤起日历（无下载，安卓跳官方日历页面）
         function setReminder() {
             const rd = window.remindDate;
             const email = userEmailInput.value.trim();
@@ -295,18 +294,17 @@
             if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { showMessage(i18n.errorEmail, 'error'); return; }
             if (ua.includes('micromessenger')) { wechatTip.innerText = i18n.wechatTip; wechatTip.style.display = 'block'; return; }
 
-            const y = rd.getFullYear(), m = pad(rd.getMonth()+1), d = pad(rd.getDate());
-            const dateStr = formatDT(rd);
             const title = isEnglish ? "Filter Replacement" : "滤芯更换提醒";
             const startTime = rd.getTime();
+            const endTime = startTime + 3600000;
 
-            // -------------------- iOS --------------------
+            // -------------------- iOS：直接弹日历 --------------------
             if (/iphone|ipad|ipod/.test(ua)) {
+                const dateStr = `${rd.getFullYear()}${pad(rd.getMonth()+1)}${pad(rd.getDate())}`;
                 const ics = `BEGIN:VCALENDAR
 VERSION:2.0
-PRODID:-//Filter Reminder//CN
 BEGIN:VEVENT
-UID:filter-${Date.now()}
+UID:${Date.now()}
 DTSTART:${dateStr}T090000
 DTEND:${dateStr}T100000
 SUMMARY:${title}
@@ -315,28 +313,25 @@ TRIGGER:-P${days}D
 END:VALARM
 END:VEVENT
 END:VCALENDAR`;
-                const blob = new Blob([ics], { type: 'text/calendar;charset=utf-8' });
-                const url = URL.createObjectURL(blob);
-                
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = 'filter-reminder.ics';
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                
-                setTimeout(() => URL.revokeObjectURL(url), 1000);
-                showMessage(`${i18n.success}：${formatDate(rd)}`, 'success');
+                const blob = new Blob([ics], { type: 'text/calendar' });
+                window.location.href = URL.createObjectURL(blob);
+                showMessage(i18n.success, 'success');
                 return;
             }
 
-            // -------------------- 安卓全机型兼容 --------------------
-            const androidIntent = `intent:#Intent;action=android.intent.action.INSERT;type=vnd.android.cursor.item/event;title=${encodeURIComponent(title)};beginTime=${startTime};endTime=${startTime+3600000};S.description=${encodeURIComponent(title)};end`;
+            // -------------------- 安卓：跳系统日历官方添加页面 --------------------
+            const androidCalendarUrl = `content://com.android.calendar/events?title=${encodeURIComponent(title)}&beginTime=${startTime}&endTime=${endTime}`;
             try {
-                window.location.href = androidIntent;
+                // 方案1：系统日历
+                window.location.href = androidCalendarUrl;
             } catch(e) {}
-            
-            showMessage(`${i18n.success}：${formatDate(rd)}`, 'success');
+
+            // 方案2：谷歌日历（备用）
+            setTimeout(() => {
+                window.open(`https://calendar.google.com/calendar/r/eventedit?text=${encodeURIComponent(title)}&dates=${Math.floor(startTime/1000)}/${Math.floor(endTime/1000)}`, '_blank');
+            }, 500);
+
+            showMessage(i18n.success, 'success');
         }
 
         // 提示
