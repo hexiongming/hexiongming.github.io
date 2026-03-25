@@ -275,8 +275,8 @@
         const remindDaysSelect = document.getElementById('remindDays');
         // 新增：邮箱后缀DOM
         const emailSuggest = document.getElementById('emailSuggest');
-        // 国际通用邮箱后缀
-        const commonDomains = ['gmail.com', 'yahoo.com', 'hotmail.com', 'outlook.com', 'icloud.com', 'qq.com', '163.com', '126.com', 'sina.com', 'sohu.com'];
+        // 国际通用邮箱后缀 + 新增Google邮箱
+        const commonDomains = ['gmail.com', 'googlemail.com', 'yahoo.com', 'hotmail.com', 'outlook.com', 'icloud.com', 'qq.com', '163.com', '126.com', 'sina.com', 'sohu.com'];
 
         // 初始化
         function initDefaultDate() {
@@ -384,16 +384,26 @@ END:VCALENDAR`;
         return;
     }
 
-    // -------------------- 安卓优化方案：通用系统日历Intent（不下载ics） --------------------
+    // -------------------- 安卓终极兼容方案（华为+vivo+全品牌） --------------------
     const startMillis = rd.getTime();
-    const endMillis = startMillis + 3600000; // 持续1小时
-    const intentUri = `intent://calendar/event?action=INSERT&title=${encodeURIComponent(title)}&begin=${startMillis}&end=${endMillis}#Intent;scheme=content;type=vnd.android.cursor.item/event;end;`;
-    
-    const a = document.createElement('a');
-    a.href = intentUri;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
+    const endMillis = startMillis + 3600000;
+    const eventTitle = encodeURIComponent(title);
+
+    // 方案1：系统标准Intent（华为/小米/通用安卓）
+    const intent1 = `intent:#Intent;action=android.intent.action.INSERT;type=vnd.android.cursor.item/event;l.title=${eventTitle};l.begin=${startMillis};l.end=${endMillis};end;`;
+    // 方案2：vivo/oppo专用日历Intent
+    const intent2 = `intent:#Intent;component=com.bbk.calendar/.cal.activity.EventEditActivity;action=android.intent.action.INSERT;type=vnd.android.cursor.item/event;title=${eventTitle};beginTime=${startMillis};endTime=${endMillis};end;`;
+    // 方案3：华为专用日历
+    const intent3 = `intent:#Intent;action=android.intent.action.INSERT;type=vnd.android.cursor.item/event;component=com.android.calendar/.EventEditActivity;title=${eventTitle};begin=${startMillis};end=${endMillis};end;`;
+
+    // 依次触发，确保至少一个能打开
+    [intent1, intent2, intent3].forEach(uri => {
+        const a = document.createElement('a');
+        a.href = uri;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+    });
 
     showMessage(`${i18n.success}：${formatDate(rd)}`, 'success');
 }
