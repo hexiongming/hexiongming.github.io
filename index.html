@@ -259,7 +259,7 @@
             window.remindDate = remindDate;
         });
 
-        // 核心：全平台直接唤起日历
+        // 核心：无弹窗唤起日历
         function setReminder() {
             const remindDate = window.remindDate;
             const installDate = installDateInput.value;
@@ -277,43 +277,47 @@
                 return;
             }
 
-            // 生成日历数据
             const y = remindDate.getFullYear();
             const m = String(remindDate.getMonth() + 1).padStart(2, '0');
             const d = String(remindDate.getDate()).padStart(2, '0');
-            const dateStr = `${y}-${m}-${d}`;
-            const title = encodeURIComponent(`滤芯更换提醒`);
+            const title = encodeURIComponent("滤芯更换提醒");
             const desc = encodeURIComponent(`安装日期：${installDate.replace(/-/g, '/')}\n提前${remindDays}天提醒更换滤芯`);
 
-            // 全平台统一：使用 webcal 协议直接唤起日历
-            const webcalUrl = `webcal://${window.location.host}/add?title=${title}&date=${dateStr}&description=${desc}&remind=${remindDays}`;
-            const icsUrl = `data:text/calendar;charset=utf-8,${encodeURIComponent(generateFullICS(remindDate, remindDays, installDate))}`;
+            // iOS：使用 calshow 协议，直接跳转到日历编辑页（无订阅弹窗）
+            if (isIOS()) {
+                const iosUrl = `calshow:${y}-${m}-${d}?title=${title}&description=${desc}`;
+                window.location.href = iosUrl;
+                showMessage(`✅ 已打开日历：${formatDate(remindDate)} 更换（提前${remindDays}天提醒）`, 'success');
+                return;
+            }
 
-            // 优先唤起日历，失败自动降级
-            window.location.href = webcalUrl;
-            setTimeout(() => {
-                window.location.href = icsUrl;
-            }, 300);
-
-            showMessage(`✅ 已打开日历：${formatDate(remindDate)} 更换（提前${remindDays}天提醒）`, 'success');
+            // 安卓/PC：生成标准 ICS 并直接打开（无下载弹窗）
+            const icsContent = generateICS(remindDate, remindDays, installDate);
+            const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `滤芯更换提醒_${formatDate(remindDate).replace(/\//g, '-')}.ics`;
+            a.click();
+            URL.revokeObjectURL(url);
+            showMessage(`✅ 日历提醒已生成：${formatDate(remindDate)} 更换（提前${remindDays}天提醒）`, 'success');
         }
 
-        // 生成完整日历事件（含提醒）
-        function generateFullICS(date, days, installDate) {
+        // 生成 ICS 日历文件
+        function generateICS(date, days, installDate) {
             const y = date.getFullYear(), m = String(date.getMonth()+1).padStart(2,0), d = String(date.getDate()).padStart(2,0);
             const start = `${y}${m}${d}T090000`;
             const end = `${y}${m}${d}T100000`;
-
             return `BEGIN:VCALENDAR
 VERSION:2.0
-PRODID:-//Filter//CN
+PRODID:-//Filter Reminder//CN
 BEGIN:VEVENT
 UID:${Date.now()}
 DTSTAMP:${start}
 DTSTART:${start}
 DTEND:${end}
 SUMMARY:滤芯更换提醒
-DESCRIPTION:安装日期：${installDate.replace(/-/g,'/')}
+DESCRIPTION:安装日期：${installDate.replace(/-/g, '/')}
 BEGIN:VALARM
 TRIGGER:-P${days}D
 ACTION:DISPLAY
@@ -326,6 +330,12 @@ END:VCALENDAR`.replace(/\n/g, '\r\n');
         // 判断微信
         function isWechatBrowser() {
             return navigator.userAgent.toLowerCase().includes('micromessenger');
+        }
+
+        // 判断 iOS
+        function isIOS() {
+            const ua = navigator.userAgent.toLowerCase();
+            return /iphone|ipad|ipod/.test(ua);
         }
 
         // 邮箱验证
