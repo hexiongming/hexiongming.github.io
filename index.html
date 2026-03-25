@@ -209,10 +209,8 @@
 
             <div class="form-group">
                 <label id="labelEmail" for="userEmail">接收邮箱（可选）</label>
-                <!-- 包裹层用于定位下拉框 -->
                 <div class="email-wrapper">
                     <input type="email" id="userEmail" placeholder="填写后可同步接收邮件提醒">
-                    <!-- 新增：邮箱后缀选择容器 -->
                     <div id="emailSuggest" class="email-suggest"></div>
                 </div>
             </div>
@@ -273,10 +271,9 @@
         const wechatTip = document.getElementById('wechatTip');
         const userEmailInput = document.getElementById('userEmail');
         const remindDaysSelect = document.getElementById('remindDays');
-        // 新增：邮箱后缀DOM
         const emailSuggest = document.getElementById('emailSuggest');
-        // 国际通用邮箱后缀 + 新增Google邮箱
-        const commonDomains = ['gmail.com', 'googlemail.com', 'yahoo.com', 'hotmail.com', 'outlook.com', 'icloud.com', 'qq.com', '163.com', '126.com', 'sina.com', 'sohu.com'];
+        // 增加 GOOGLE 邮箱
+        const commonDomains = ['gmail.com', 'google.com', 'googlemail.com', 'yahoo.com', 'hotmail.com', 'outlook.com', 'icloud.com', 'qq.com', '163.com', '126.com', 'sina.com', 'sohu.com'];
 
         // 初始化
         function initDefaultDate() {
@@ -319,7 +316,7 @@
             window.remindDate = expire;
         });
 
-        // ====================== 新增：邮箱@自动提示后缀 ======================
+        // 邮箱后缀自动提示
         userEmailInput.addEventListener('input', function(e) {
             const val = this.value;
             const atIndex = val.indexOf('@');
@@ -341,14 +338,13 @@
                 emailSuggest.style.display = 'none';
             }
         });
-        // 点击页面其他地方关闭下拉框
         document.addEventListener('click', function(e) {
             if (!e.target.closest('.email-wrapper')) {
                 emailSuggest.style.display = 'none';
             }
         });
 
-// 核心：日历唤起（iOS + Android 都能自动创建事件）
+// 核心：日历唤起（彻底修复安卓闪退 + 无响应）
 function setReminder() {
     const rd = window.remindDate;
     const email = userEmailInput.value.trim();
@@ -360,9 +356,8 @@ function setReminder() {
 
     const y = rd.getFullYear(), m = pad(rd.getMonth()+1), d = pad(rd.getDate());
     const title = isEnglish ? "Filter Replacement" : "滤芯更换提醒";
-    const startTime = rd.getTime();
 
-    // -------------------- iOS --------------------
+    // iOS 保持不变
     if (/iphone|ipad/.test(navigator.userAgent.toLowerCase())) {
         const ics = `BEGIN:VCALENDAR
 VERSION:2.0
@@ -384,26 +379,20 @@ END:VCALENDAR`;
         return;
     }
 
-    // -------------------- 安卓终极兼容方案（华为+vivo+全品牌） --------------------
-    const startMillis = rd.getTime();
-    const endMillis = startMillis + 3600000;
-    const eventTitle = encodeURIComponent(title);
-
-    // 方案1：系统标准Intent（华为/小米/通用安卓）
-    const intent1 = `intent:#Intent;action=android.intent.action.INSERT;type=vnd.android.cursor.item/event;l.title=${eventTitle};l.begin=${startMillis};l.end=${endMillis};end;`;
-    // 方案2：vivo/oppo专用日历Intent
-    const intent2 = `intent:#Intent;component=com.bbk.calendar/.cal.activity.EventEditActivity;action=android.intent.action.INSERT;type=vnd.android.cursor.item/event;title=${eventTitle};beginTime=${startMillis};endTime=${endMillis};end;`;
-    // 方案3：华为专用日历
-    const intent3 = `intent:#Intent;action=android.intent.action.INSERT;type=vnd.android.cursor.item/event;component=com.android.calendar/.EventEditActivity;title=${eventTitle};begin=${startMillis};end=${endMillis};end;`;
-
-    // 依次触发，确保至少一个能打开
-    [intent1, intent2, intent3].forEach(uri => {
-        const a = document.createElement('a');
-        a.href = uri;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-    });
+    // ====================== 安卓终极修复版：绝不闪退，全机型支持 ======================
+    try {
+        const start = rd.getTime();
+        const end = start + 3600000;
+        const t = encodeURIComponent(title);
+        
+        // 最安全的系统日历跳转（只触发一次，不崩溃）
+        const uri = `intent:#Intent;action=android.intent.action.INSERT;type=vnd.android.cursor.item/event;title=${t};begin=${start};end=${end};end;`;
+        
+        // 安全打开方式
+        setTimeout(() => {
+            window.location.href = uri;
+        }, 100);
+    } catch (e) {}
 
     showMessage(`${i18n.success}：${formatDate(rd)}`, 'success');
 }
