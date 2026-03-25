@@ -181,7 +181,7 @@
             </div>
 
             <div class="form-group">
-                <label id="labelEmail" for="userEmail">接收邮箱（选填）</label>
+                <label id="labelEmail" for="userEmail">接收邮箱（可选）</label>
                 <input type="email" id="userEmail" placeholder="填写后可同步接收邮件提醒">
             </div>
 
@@ -202,7 +202,7 @@
             installDate: isEnglish ? 'Install Date' : '安装日期',
             expireDate: isEnglish ? 'Expiration Date' : '预计更换日期',
             remindDays: isEnglish ? 'Remind Before (1-30 days)' : '提前提醒天数（可选，1-30天）',
-            email: isEnglish ? 'Email (Optional)' : '接收邮箱（选填）',
+            email: isEnglish ? 'Email (Optional)' : '接收邮箱（可选）',
             emailPlaceholder: isEnglish ? 'Receive email alerts' : '填写后可同步接收邮件提醒',
             confirmBtn: isEnglish ? 'Set Reminder' : '确认设置提醒',
             selectDate: isEnglish ? 'Please select install date first' : '请先选择安装日期',
@@ -213,7 +213,6 @@
             errorEmail: isEnglish ? 'Invalid email format' : '邮箱格式错误'
         };
 
-        // 自动应用语言
         document.getElementById('pageTitle').innerText = i18n.pageTitle;
         document.getElementById('pageDesc').innerText = i18n.pageDesc;
         document.getElementById('formTitle').innerText = i18n.formTitle;
@@ -225,7 +224,6 @@
         document.getElementById('confirmBtn').innerText = i18n.confirmBtn;
         document.getElementById('remindDateDisplay').innerText = i18n.selectDate;
 
-        // 切换下拉选项语言
         const select = document.getElementById('remindDays');
         Array.from(select.options).forEach(opt => {
             opt.textContent = isEnglish ? opt.dataset.en : opt.dataset.cn;
@@ -277,7 +275,7 @@
 
             const today = new Date();
             const todayOnly = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-            const remindOnly = new Date(remindDate.getFullYear(), remindDate.getMonth(), remindDate.getDate());
+            const remindOnly = new Date(remindDate.getFullYear(), remindDate.getMonth(), remindOnly.getDate());
 
             if (remindOnly <= todayOnly) {
                 remindDateDisplay.textContent = formatDate(remindDate);
@@ -292,17 +290,15 @@
             window.remindDate = remindDate;
         });
 
-        // ==================== 核心：全平台唤起日历 ====================
+        // ==================== 核心：无下载、无弹窗 ====================
         function setReminder() {
             const remindDate = window.remindDate;
-            const installDate = installDateInput.value;
-            const email = userEmailInput.value.trim();
             const remindDays = parseInt(remindDaysSelect.value);
+            const email = userEmailInput.value.trim();
 
             if (!remindDate) { showMessage(i18n.errorDate, 'error'); return; }
             if (email && !validateEmail(email)) { showMessage(i18n.errorEmail, 'error'); return; }
 
-            // 微信提示
             if (isWechatBrowser()) {
                 wechatTip.innerText = i18n.wechatTip;
                 wechatTip.style.display = "block";
@@ -312,56 +308,31 @@
             const y = remindDate.getFullYear();
             const m = String(remindDate.getMonth() + 1).padStart(2, '0');
             const d = String(remindDate.getDate()).padStart(2, '0');
-            const eventTitle = isEnglish ? 'Filter Replacement' : '滤芯更换提醒';
-            const eventDesc = isEnglish 
-                ? `Installed on: ${installDate.replace(/-/g, '/')}\nReminder ${remindDays} days before replacement`
-                : `安装日期：${installDate.replace(/-/g, '/')}\n提前${remindDays}天提醒更换`;
+            const title = isEnglish ? "Filter Replacement" : "滤芯更换提醒";
 
-            // 生成标准ICS并直接唤起日历
-            const ics = generateICS(remindDate, remindDays, eventTitle, eventDesc);
-            const blob = new Blob([ics], { type: 'text/calendar;charset=utf-8' });
-            const url = URL.createObjectURL(blob);
-            window.location.href = url;
+            // -------------------- iOS 原生协议（无下载） --------------------
+            if (isIOS()) {
+                window.location.href = `calshow:${y}-${m}-${d}?title=${encodeURIComponent(title)}`;
+                showMessage(`${i18n.success}：${formatDate(remindDate)}`, 'success');
+                return;
+            }
 
+            // -------------------- 安卓 直接打开（无下载） --------------------
+            window.location.href = `content://com.android.calendar/events?title=${encodeURIComponent(title)}&dtstart=${remindDate.getTime()}`;
             showMessage(`${i18n.success}：${formatDate(remindDate)}`, 'success');
         }
 
-        // ==================== 生成完整日历事件 ====================
-        function generateICS(date, days, title, desc) {
-            const y = date.getFullYear(), m = String(date.getMonth()+1).padStart(2,0), d = String(date.getDate()).padStart(2,0);
-            const start = `${y}${m}${d}T090000`;
-            const end = `${y}${m}${d}T100000`;
-            return `BEGIN:VCALENDAR
-VERSION:2.0
-PRODID:-//Filter//${isEnglish?'EN':'CN'}
-BEGIN:VEVENT
-UID:${Date.now()}
-DTSTAMP:${start}
-DTSTART:${start}
-DTEND:${end}
-SUMMARY:${title}
-DESCRIPTION:${desc}
-BEGIN:VALARM
-TRIGGER:-P${days}D
-ACTION:DISPLAY
-DESCRIPTION:${title}
-END:VALARM
-END:VEVENT
-END:VCALENDAR`.replace(/\n/g, '\r\n');
-        }
-
-        // ==================== 工具判断 ====================
+        // ==================== 设备判断 ====================
         function isWechatBrowser() { return navigator.userAgent.toLowerCase().includes('micromessenger'); }
+        function isIOS() { const ua = navigator.userAgent.toLowerCase(); return /iphone|ipad|ipod/.test(ua); }
         function validateEmail(e) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e); }
 
-        // ==================== 提示：成功永久显示 ====================
+        // ==================== 提示永久显示 ====================
         function showMessage(text, type) {
             messageBox.textContent = text;
             messageBox.className = `message ${type}`;
             wechatTip.style.display = 'none';
-            if (type === 'error') {
-                setTimeout(() => { messageBox.className = 'message'; }, 4000);
-            }
+            if (type === 'error') setTimeout(() => messageBox.className = 'message', 4000);
         }
 
         window.onload = initDefaultDate;
