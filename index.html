@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <title>Filter Replacement Reminder</title>
+    <title>滤芯更换提醒</title>
     <style>
         * {
             margin: 0;
@@ -15,185 +15,148 @@
 
         body {
             background-color: #f5f7fa;
-            min-height: 100vh;
             padding: 20px;
+        }
+
+        .container {
+            max-width: 500px;
+            margin: 0 auto;
+            background: #fff;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
         }
 
         .header {
-            background-color: #0078d7;
-            color: white;
-            padding: 15px 20px;
-            border-radius: 8px 8px 0 0;
-        }
-
-        .header h1 {
-            font-size: 18px;
-            font-weight: 600;
-        }
-
-        .header p {
-            font-size: 14px;
-            margin-top: 5px;
-            opacity: 0.9;
-        }
-
-        .reminder-container {
-            background: white;
-            max-width: 500px;
-            margin: 0 auto;
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-            overflow: hidden;
-        }
-
-        .form-section {
-            padding: 20px;
-        }
-
-        .form-title {
-            font-size: 16px;
-            color: #333;
+            text-align: center;
             margin-bottom: 20px;
-            font-weight: 600;
+        }
+
+        .header h2 {
+            color: #0078d7;
+            font-size: 18px;
         }
 
         .form-group {
-            margin-bottom: 20px;
+            margin-bottom: 18px;
         }
 
         label {
             display: block;
             margin-bottom: 8px;
-            color: #555;
             font-size: 14px;
+            color: #333;
         }
 
-        input[type="date"],
-        input#userEmail {
+        input, select {
             width: 100%;
-            padding: 12px 15px;
+            padding: 12px;
             border: 1px solid #ddd;
             border-radius: 6px;
-            font-size: 16px;
+            font-size: 15px;
             outline: none;
         }
 
-        .date-display {
-            padding: 12px 15px;
-            background-color: #f9f9f9;
-            border: 1px solid #ddd;
-            border-radius: 6px;
-            color: #0078d7;
-            font-size: 16px;
-            margin-top: 5px;
-        }
-
-        select {
-            width: 100%;
-            padding: 12px 15px;
-            border: 1px solid #ddd;
-            border-radius: 6px;
-            font-size: 16px;
-        }
-
-        /* 邮箱后缀按钮 */
-        .email-suffix-group {
+        /* 邮箱 + 下拉后缀 组合框 */
+        .email-container {
+            position: relative;
             display: flex;
-            flex-wrap: wrap;
-            gap: 6px;
-            margin-top: 8px;
+            align-items: center;
         }
-        .email-suffix-btn {
-            padding: 6px 10px;
-            background: #f0f7ff;
+
+        .email-container input {
+            flex: 1;
+            padding-right: 120px;
+        }
+
+        .email-container select {
+            position: absolute;
+            right: 0;
+            top: 0;
+            height: 100%;
+            width: 110px;
+            border: none;
+            background: transparent;
             color: #0078d7;
-            border: 1px solid #cce4ff;
-            border-radius: 4px;
-            font-size: 13px;
             cursor: pointer;
         }
 
-        .confirm-btn {
+        .date-display {
+            padding: 12px;
+            background: #f9f9f9;
+            border-radius: 6px;
+            color: #0078d7;
+        }
+
+        .btn-confirm {
             width: 100%;
             padding: 14px;
-            background-color: #0078d7;
-            color: white;
+            background: #0078d7;
+            color: #fff;
             border: none;
             border-radius: 6px;
             font-size: 16px;
-            font-weight: 600;
             cursor: pointer;
-            margin-top: 10px;
-        }
-        .confirm-btn:disabled {
-            background-color: #ccc;
-            pointer-events: none;
         }
 
-        .message {
-            margin-top: 15px;
+        .btn-confirm:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .tip {
             padding: 10px;
-            border-radius: 4px;
+            border-radius: 6px;
             font-size: 14px;
             text-align: center;
+            margin-top: 10px;
             display: none;
         }
-        .success {
-            background-color: #d4edda;
+
+        .tip-success {
+            background: #d4edda;
             color: #155724;
             display: block;
         }
-        .error {
-            background-color: #f8d7da;
+
+        .tip-error {
+            background: #f8d7da;
             color: #721c24;
             display: block;
         }
 
-        .wechat-tip {
-            background-color: #fff3cd;
-            color: #856404;
-            padding: 12px;
-            border-radius: 6px;
-            margin-top: 15px;
-            font-size: 14px;
-            text-align: center;
-            display: none;
+        .tip-saved {
+            background: #e3f2fd;
+            color: #0277bd;
+            display: block;
         }
 
-        .saved-tip {
-            background-color: #e3f2fd;
-            color: #0277bd;
-            padding: 10px;
-            border-radius: 6px;
-            font-size: 14px;
-            text-align: center;
-            margin-top: 10px;
-            display: none;
+        .tip-wechat {
+            background: #fff3cd;
+            color: #856404;
+            display: block;
         }
     </style>
 </head>
+
 <body>
-<div class="reminder-container">
-    <div class="header">
-        <h1 id="pageTitle">滤芯更换提醒</h1>
-        <p id="pageDesc">简单记录，健康饮水</p>
-    </div>
-
-    <div class="form-section">
-        <div class="form-title" id="formTitle">设置换芯提醒</div>
-
-        <div class="form-group">
-            <label id="labelInstallDate">安装日期</label>
-            <input type="date" id="installDate" required>
+    <div class="container">
+        <div class="header">
+            <h2>滤芯更换提醒</h2>
         </div>
 
         <div class="form-group">
-            <label id="labelExpireDate">预计更换日期</label>
-            <div id="remindDateDisplay" class="date-display">请先选择安装日期</div>
+            <label>安装日期</label>
+            <input type="date" id="installDate">
         </div>
 
         <div class="form-group">
-            <label id="labelRemindDays">提前提醒天数</label>
+            <label>预计更换日期</label>
+            <div class="date-display" id="expireDate">请选择安装日期</div>
+        </div>
+
+        <div class="form-group">
+            <label>提前提醒天数</label>
             <select id="remindDays">
                 <option value="1">1天</option>
                 <option value="3" selected>3天</option>
@@ -204,116 +167,102 @@
         </div>
 
         <div class="form-group">
-            <label id="labelEmail">接收邮箱（可选）</label>
-            <input type="text" id="userEmail" placeholder="输入邮箱前缀">
-            <div class="email-suffix-group">
-                <div class="email-suffix-btn" suf="@qq.com">@qq.com</div>
-                <div class="email-suffix-btn" suf="@163.com">@163.com</div>
-                <div class="email-suffix-btn" suf="@126.com">@126.com</div>
-                <div class="email-suffix-btn" suf="@gmail.com">@gmail.com</div>
-                <div class="email-suffix-btn" suf="@outlook.com">@outlook.com</div>
-                <div class="email-suffix-btn" suf="@hotmail.com">@hotmail.com</div>
-                <div class="email-suffix-btn" suf="@icloud.com">@icloud.com</div>
-                <div class="email-suffix-btn" suf="@foxmail.com">@foxmail.com</div>
+            <label>接收邮箱（可选）</label>
+            <div class="email-container">
+                <input type="text" id="emailInput" placeholder="输入邮箱">
+                <select id="emailSuffix">
+                    <option value="@qq.com">@qq.com</option>
+                    <option value="@163.com">@163.com</option>
+                    <option value="@126.com">@126.com</option>
+                    <option value="@gmail.com">@gmail.com</option>
+                    <option value="@outlook.com">@outlook.com</option>
+                    <option value="@hotmail.com">@hotmail.com</option>
+                    <option value="@icloud.com">@icloud.com</option>
+                    <option value="@foxmail.com">@foxmail.com</option>
+                </select>
             </div>
         </div>
 
-        <button class="confirm-btn" id="confirmBtn" disabled onclick="setReminder()">确认设置提醒</button>
+        <button class="btn-confirm" id="confirmBtn" disabled>确认设置提醒</button>
 
-        <div id="savedTip" class="saved-tip"></div>
-        <div id="wechatTip" class="wechat-tip"></div>
-        <div id="messageBox" class="message"></div>
+        <div class="tip" id="tip"></div>
     </div>
-</div>
 
 <script>
-    // DOM
     const installDate = document.getElementById('installDate');
-    const remindDateDisplay = document.getElementById('remindDateDisplay');
-    const userEmail = document.getElementById('userEmail');
+    const expireDate = document.getElementById('expireDate');
+    const emailInput = document.getElementById('emailInput');
+    const emailSuffix = document.getElementById('emailSuffix');
     const confirmBtn = document.getElementById('confirmBtn');
-    const messageBox = document.getElementById('messageBox');
-    const wechatTip = document.getElementById('wechatTip');
-    const savedTip = document.getElementById('savedTip');
-    const remindDays = document.getElementById('remindDays');
+    const tip = document.getElementById('tip');
 
-    // 邮箱后缀点击
-    document.querySelectorAll('.email-suffix-btn').forEach(btn => {
-        btn.onclick = () => {
-            let v = userEmail.value.trim();
-            if (v.includes('@')) v = v.split('@')[0];
-            userEmail.value = v + btn.getAttribute('suf');
-        };
-    });
+    let selectedExpire = null;
 
-    // 日期格式化
-    const pad = n => String(n).padStart(2, '0');
-    const formatDate = d => `${d.getFullYear()}/${pad(d.getMonth()+1)}/${pad(d.getDate())}`;
-
-    // 本地存储
-    function saveLocal(install, expire) {
-        localStorage.setItem('install', install);
-        localStorage.setItem('expire', expire);
-    }
-    function loadLocal() {
-        return { install: localStorage.getItem('install'), expire: localStorage.getItem('expire') };
-    }
-
-    // 初始化
-    window.onload = () => {
-        const { install, expire } = loadLocal();
-        if (install && expire) {
-            installDate.value = install;
-            const d = new Date(expire);
-            remindDateDisplay.textContent = formatDate(d);
-            confirmBtn.disabled = false;
-            savedTip.textContent = `📌 您已设置提醒：${formatDate(d)}`;
-            savedTip.style.display = 'block';
-            window.remindDate = d;
-        } else {
-            const today = new Date();
-            installDate.value = `${today.getFullYear()}-${pad(today.getMonth()+1)}-${pad(today.getDate())}`;
-        }
-    };
-
-    // 日期改变
-    installDate.addEventListener('change', () => {
-        const val = installDate.value;
+    // 日期选择 → 自动计算到期日
+    installDate.addEventListener('change', function () {
+        const val = this.value;
         if (!val) {
-            remindDateDisplay.textContent = '请先选择安装日期';
+            expireDate.textContent = "请选择安装日期";
             confirmBtn.disabled = true;
+            selectedExpire = null;
             return;
         }
-        const ins = new Date(val);
-        const exp = new Date(ins);
-        exp.setFullYear(ins.getFullYear() + 1);
-        remindDateDisplay.textContent = formatDate(exp);
-        confirmBtn.disabled = false;
-        window.remindDate = exp;
+
+        const d = new Date(val);
+        d.setFullYear(d.getFullYear() + 1);
+
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        const dateStr = `${y}-${m}-${day}`;
+
+        expireDate.textContent = dateStr;
+        selectedExpire = new Date(dateStr);
+        confirmBtn.disabled = false; // ✅ 修复：选完立刻启用按钮
+        hideTip();
     });
 
-    // ==========================
-    // 安卓终极方案：生成 .ics 下载
-    // 100% 所有安卓都能打开日历
-    // ==========================
-    function setReminder() {
-        const rd = window.remindDate;
-        const email = userEmail.value.trim();
-        const ua = navigator.userAgent.toLowerCase();
+    // 邮箱后缀自动拼接
+    emailSuffix.addEventListener('change', function () {
+        let val = emailInput.value.trim();
+        if (val.includes('@')) val = val.split('@')[0];
+        emailInput.value = val + this.value;
+    });
 
-        if (!rd) return showMsg('请选择日期', 'error');
-        if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return showMsg('邮箱格式错误', 'error');
-        if (ua.includes('micromessenger')) { wechatTip.textContent = '请在浏览器打开'; wechatTip.style.display = 'block'; return; }
+    // 确认设置
+    confirmBtn.addEventListener('click', function () {
+        if (!installDate.value) {
+            showTip("请先选择安装日期", "error");
+            return;
+        }
 
-        saveLocal(installDate.value, rd.toISOString());
-        savedTip.textContent = `📌 您已设置提醒：${formatDate(rd)}`;
-        savedTip.style.display = 'block';
+        if (!selectedExpire) {
+            showTip("日期无效，请重新选择", "error");
+            return;
+        }
 
-        // 生成标准日历文件
-        const y = rd.getFullYear(), m = pad(rd.getMonth()+1), d = pad(rd.getDate());
+        const email = emailInput.value.trim();
+        if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+            showTip("邮箱格式不正确", "error");
+            return;
+        }
+
+        // 生成日历
+        createCalendar(selectedExpire);
+        showTip("✅ 提醒设置成功，已打开日历", "success");
+
+        // 本地保存
+        localStorage.setItem('installDate', installDate.value);
+    });
+
+    // 打开日历（全平台稳定）
+    function createCalendar(date) {
+        const y = date.getFullYear();
+        const m = String(date.getMonth() + 1).padStart(2, '0');
+        const d = String(date.getDate()).padStart(2, '0');
+
         const ics = `BEGIN:VCALENDAR
 VERSION:2.0
-PRODID:-//Filter//CN
 BEGIN:VEVENT
 UID:${Date.now()}
 DTSTART:${y}${m}${d}T090000
@@ -331,15 +280,25 @@ END:VCALENDAR`;
         a.click();
         document.body.removeChild(a);
         setTimeout(() => URL.revokeObjectURL(url), 500);
-
-        showMsg('✅ 日历文件已生成，点击打开即可保存', 'success');
     }
 
-    function showMsg(text, type) {
-        messageBox.textContent = text;
-        messageBox.className = 'message ' + type;
-        setTimeout(() => messageBox.className = 'message', 3000);
+    // 提示
+    function showTip(text, type) {
+        tip.textContent = text;
+        tip.className = "tip tip-" + type;
     }
+    function hideTip() {
+        tip.className = "tip";
+    }
+
+    // 加载本地记录
+    window.onload = function () {
+        const saved = localStorage.getItem('installDate');
+        if (saved) {
+            installDate.value = saved;
+            installDate.dispatchEvent(new Event('change'));
+        }
+    };
 </script>
 </body>
 </html>
