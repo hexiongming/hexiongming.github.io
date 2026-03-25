@@ -228,6 +228,7 @@
         // 日期监听
         installDateInput.addEventListener('change', function () {
             const val = this.value;
+            // 重新选择日期时，清空之前的成功/错误提示
             messageBox.className = 'message';
             wechatTip.style.display = 'none';
 
@@ -287,7 +288,7 @@
             if (isIOS()) {
                 const iosUrl = `calshow:${y}-${m}-${d}?title=${title}&description=${desc}`;
                 window.location.href = iosUrl;
-                showMessage(`✅ 已打开日历：${formatDate(remindDate)} 更换（提前${remindDays}天提醒）`, 'success');
+                showMessage(`✅ 日历提醒已生成：${formatDate(remindDate)} 更换（提前${remindDays}天提醒）`, 'success');
                 return;
             }
 
@@ -343,12 +344,16 @@ END:VCALENDAR`.replace(/\n/g, '\r\n');
             return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
         }
 
-        // 提示
+        // 提示：成功提示永久保留，错误提示4秒后消失
         function showMessage(text, type) {
             messageBox.textContent = text;
             messageBox.className = `message ${type}`;
             wechatTip.style.display = 'none';
-            setTimeout(() => messageBox.className = 'message', 4000);
+            if (type === 'error') {
+                setTimeout(() => {
+                    messageBox.className = 'message';
+                }, 4000);
+            }
         }
 
         window.onload = initDefaultDate;
