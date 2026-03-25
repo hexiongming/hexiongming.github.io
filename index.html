@@ -441,6 +441,8 @@ try {
     const gCalUrl = `https://calendar.google.com/calendar/r/eventedit?text=${encodeURIComponent(title)}&dates=${y}${m}${d}T090000/${y}${m}${d}T100000`;
     window.open(gCalUrl, '_blank');
 }
+        showMessage(`${i18n.success}：${formatDate(rd)}`, 'success');
+}
 
         function showMessage(text, type) {
             messageBox.textContent = text;
