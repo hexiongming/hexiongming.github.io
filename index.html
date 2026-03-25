@@ -172,11 +172,11 @@
             <div class="form-group">
                 <label id="labelRemindDays" for="remindDays">提前提醒天数（可选，1-30天）</label>
                 <select id="remindDays">
-                    <option value="1">1天</option>
-                    <option value="3" selected>3天</option>
-                    <option value="7">7天</option>
-                    <option value="15">15天</option>
-                    <option value="30">30天</option>
+                    <option value="1" data-cn="1天" data-en="1 day">1天</option>
+                    <option value="3" data-cn="3天" data-en="3 days" selected>3天</option>
+                    <option value="7" data-cn="7天" data-en="7 days">7天</option>
+                    <option value="15" data-cn="15天" data-en="15 days">15天</option>
+                    <option value="30" data-cn="30天" data-en="30 days">30天</option>
                 </select>
             </div>
 
@@ -207,7 +207,7 @@
             confirmBtn: isEnglish ? 'Set Reminder' : '确认设置提醒',
             selectDate: isEnglish ? 'Please select install date first' : '请先选择安装日期',
             dateInvalid: isEnglish ? 'Expiration date must be after today' : '更换日期必须晚于今天',
-            wechatTip: isEnglish ? 'Please open in system browser' : '微信无法调用日历，请在浏览器中打开',
+            wechatTip: isEnglish ? 'WeChat cannot open calendar. Please open in system browser.' : '微信无法调用日历，请在浏览器中打开',
             success: isEnglish ? '✅ Calendar reminder created successfully' : '✅ 日历提醒已生成',
             errorDate: isEnglish ? 'Please select valid date' : '请选择有效日期',
             errorEmail: isEnglish ? 'Invalid email format' : '邮箱格式错误'
@@ -224,6 +224,12 @@
         document.getElementById('userEmail').placeholder = i18n.emailPlaceholder;
         document.getElementById('confirmBtn').innerText = i18n.confirmBtn;
         document.getElementById('remindDateDisplay').innerText = i18n.selectDate;
+
+        // 切换下拉选项语言
+        const select = document.getElementById('remindDays');
+        Array.from(select.options).forEach(opt => {
+            opt.textContent = isEnglish ? opt.dataset.en : opt.dataset.cn;
+        });
 
         // ==================== 工具函数 ====================
         const formatDate = (date) => {
@@ -286,7 +292,7 @@
             window.remindDate = remindDate;
         });
 
-        // ==================== 核心：创建日历提醒 ====================
+        // ==================== 核心：全平台唤起日历 ====================
         function setReminder() {
             const remindDate = window.remindDate;
             const installDate = installDateInput.value;
@@ -307,32 +313,21 @@
             const m = String(remindDate.getMonth() + 1).padStart(2, '0');
             const d = String(remindDate.getDate()).padStart(2, '0');
             const eventTitle = isEnglish ? 'Filter Replacement' : '滤芯更换提醒';
+            const eventDesc = isEnglish 
+                ? `Installed on: ${installDate.replace(/-/g, '/')}\nReminder ${remindDays} days before replacement`
+                : `安装日期：${installDate.replace(/-/g, '/')}\n提前${remindDays}天提醒更换`;
 
-            // ==================== iOS 修复：自动填充日程 + 时间 + 提醒 ====================
-            if (isIOS()) {
-                const ics = generateICS(remindDate, remindDays, eventTitle);
-                const blob = new Blob([ics], { type: 'text/calendar' });
-                const url = URL.createObjectURL(blob);
-                window.location.href = url;
-
-                showMessage(`${i18n.success}：${formatDate(remindDate)}`, 'success');
-                return;
-            }
-
-            // ==================== 安卓 / PC ====================
-            const icsContent = generateICS(remindDate, remindDays, eventTitle);
-            const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
+            // 生成标准ICS并直接唤起日历
+            const ics = generateICS(remindDate, remindDays, eventTitle, eventDesc);
+            const blob = new Blob([ics], { type: 'text/calendar;charset=utf-8' });
             const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.click();
-            URL.revokeObjectURL(url);
+            window.location.href = url;
 
             showMessage(`${i18n.success}：${formatDate(remindDate)}`, 'success');
         }
 
-        // ==================== 生成日历事件（自动带提醒） ====================
-        function generateICS(date, days, title) {
+        // ==================== 生成完整日历事件 ====================
+        function generateICS(date, days, title, desc) {
             const y = date.getFullYear(), m = String(date.getMonth()+1).padStart(2,0), d = String(date.getDate()).padStart(2,0);
             const start = `${y}${m}${d}T090000`;
             const end = `${y}${m}${d}T100000`;
@@ -345,6 +340,7 @@ DTSTAMP:${start}
 DTSTART:${start}
 DTEND:${end}
 SUMMARY:${title}
+DESCRIPTION:${desc}
 BEGIN:VALARM
 TRIGGER:-P${days}D
 ACTION:DISPLAY
@@ -356,7 +352,6 @@ END:VCALENDAR`.replace(/\n/g, '\r\n');
 
         // ==================== 工具判断 ====================
         function isWechatBrowser() { return navigator.userAgent.toLowerCase().includes('micromessenger'); }
-        function isIOS() { const ua = navigator.userAgent.toLowerCase(); return /iphone|ipad|ipod/.test(ua); }
         function validateEmail(e) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e); }
 
         // ==================== 提示：成功永久显示 ====================
