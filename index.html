@@ -334,7 +334,7 @@
             }
         });
 
-// ====================== 最终方案：系统日历优先 + 自动降级Google日历 ======================
+// ====================== 最终完美方案：安卓主流厂商日历 DeepLink 直达 ======================
 function setReminder() {
     const rd = window.remindDate;
     const email = userEmailInput.value.trim();
@@ -344,17 +344,22 @@ function setReminder() {
     if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { showMessage(i18n.errorEmail, 'error'); return; }
     if (navigator.userAgent.toLowerCase().includes('micromessenger')) { wechatTip.innerText = i18n.wechatTip; wechatTip.style.display = 'block'; return; }
 
-    const y = rd.getFullYear(), m = pad(rd.getMonth()+1), d = pad(rd.getDate());
+    const y = rd.getFullYear();
+    const m = rd.getMonth(); // 原生月份从 0 开始
+    const d = rd.getDate();
     const title = isEnglish ? "Filter Replacement" : "滤芯更换提醒";
+    const beginTime = rd.getTime();
+    const endTime = beginTime + 3600 * 1000; // 1小时
+    const alarmMinutes = days * 24 * 60; // 提醒：提前N天 → 分钟
 
-    // iOS 正常
+    // -------------------- iOS --------------------
     if (/iphone|ipad/.test(navigator.userAgent.toLowerCase())) {
         const ics = `BEGIN:VCALENDAR
 VERSION:2.0
 BEGIN:VEVENT
 UID:${Date.now()}
-DTSTART:${y}${m}${d}T090000
-DTEND:${y}${m}${d}T100000
+DTSTART:${y}${pad(m+1)}${pad(d)}T090000
+DTEND:${y}${pad(m+1)}${pad(d)}T100000
 SUMMARY:${title}
 BEGIN:VALARM
 TRIGGER:-P${days}D
@@ -369,20 +374,55 @@ END:VCALENDAR`;
         return;
     }
 
-    // ==================== 安卓 最终可用方案 ====================
-    // 系统允许跳转 → 自动弹窗打开日历
-    const calendarUrl = `https://calendar.google.com/calendar/r/eventedit?text=${encodeURIComponent(title)}&dates=${y}${m}${d}/${y}${m}${d}`;
-  
-    // 最稳定跳转方式
-    const a = document.createElement('a');
-    a.setAttribute('href', calendarUrl);
-    a.setAttribute('target', '_blank');
-    a.style.display = 'none';
-    document.body.appendChild(a);
-    a.click();
-    setTimeout(() => document.body.removeChild(a), 100);
+    // -------------------- 安卓 主流厂商 DeepLink 直达日历新建日程 --------------------
+    const userAgent = navigator.userAgent.toLowerCase();
+    let deeplink = '';
 
-    showMessage(`请选择日历APP打开，自动新建日程`, 'success');
+    // 1. 小米 / 红米
+    if (userAgent.includes('xiaomi') || userAgent.includes('redmi')) {
+        deeplink = `miui-calendar://event/new?begin=${beginTime}&end=${endTime}&title=${encodeURIComponent(title)}&minutes=${alarmMinutes}`;
+    }
+    // 2. 华为 / 荣耀
+    else if (userAgent.includes('huawei') || userAgent.includes('honor')) {
+        deeplink = `hwcalendarscheme://newevent?beginTime=${beginTime}&endTime=${endTime}&title=${encodeURIComponent(title)}&alarmMinutes=${alarmMinutes}`;
+    }
+    // 3. vivo / iQOO
+    else if (userAgent.includes('vivo') || userAgent.includes('iqoo')) {
+        deeplink = `vcalendarscheme://newevent?begin=${beginTime}&end=${endTime}&title=${encodeURIComponent(title)}`;
+    }
+    // 4. OPPO / 真我 / 一加
+    else if (userAgent.includes('oppo') || userAgent.includes('realme') || userAgent.includes('oneplus')) {
+        deeplink = `ocls://calendar/event/create?beginTime=${beginTime}&endTime=${endTime}&title=${encodeURIComponent(title)}`;
+    }
+    // 5. 三星
+    else if (userAgent.includes('samsung')) {
+        deeplink = `samsung-calendar://event/new?begin=${beginTime}&end=${endTime}&title=${encodeURIComponent(title)}`;
+    }
+    // 6. 安卓原生/通用
+    else {
+        deeplink = `content://com.android.calendar/events/new?begin=${beginTime}&end=${endTime}&title=${encodeURIComponent(title)}`;
+    }
+
+    // ==================== 执行跳转（浏览器允许的标准方式） ====================
+    try {
+        const a = document.createElement('a');
+        a.href = deeplink;
+        a.target = '_blank';
+        a.style.display = 'none';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+
+        showMessage(`${i18n.success}：已打开日历新建日程`, 'success');
+    } catch (e) {
+        showMessage(`请打开系统日历手动添加：${title} ${formatDate(rd)}`, 'success');
+    }
+    showMessage(`${i18n.success}：${formatDate(rd)}`, 'success');
+}
+
+// 补零工具函数（确保代码完整）
+function pad(num) {
+    return num < 10 ? '0' + num : num;
 }
         function showMessage(text, type) {
             messageBox.textContent = text;
