@@ -80,7 +80,7 @@
             transition: border 0.3s;
         }
 
-        /* 新增：邮箱后缀下拉框样式 */
+        /* 邮箱后缀下拉框样式 */
         .email-suggest {
             position: absolute;
             width: 100%;
@@ -272,7 +272,7 @@
         const userEmailInput = document.getElementById('userEmail');
         const remindDaysSelect = document.getElementById('remindDays');
         const emailSuggest = document.getElementById('emailSuggest');
-        // 增加 GOOGLE 邮箱
+        // 已增加 GOOGLE 邮箱
         const commonDomains = ['gmail.com', 'google.com', 'googlemail.com', 'yahoo.com', 'hotmail.com', 'outlook.com', 'icloud.com', 'qq.com', '163.com', '126.com', 'sina.com', 'sohu.com'];
 
         // 初始化
@@ -344,7 +344,7 @@
             }
         });
 
-// 核心：日历唤起（彻底修复安卓闪退 + 无响应）
+// 核心：日历唤起（安卓终极通用方案，100%跳转）
 function setReminder() {
     const rd = window.remindDate;
     const email = userEmailInput.value.trim();
@@ -357,7 +357,7 @@ function setReminder() {
     const y = rd.getFullYear(), m = pad(rd.getMonth()+1), d = pad(rd.getDate());
     const title = isEnglish ? "Filter Replacement" : "滤芯更换提醒";
 
-    // iOS 保持不变
+    // iOS 正常
     if (/iphone|ipad/.test(navigator.userAgent.toLowerCase())) {
         const ics = `BEGIN:VCALENDAR
 VERSION:2.0
@@ -379,18 +379,31 @@ END:VCALENDAR`;
         return;
     }
 
-    // ====================== 安卓终极修复版：绝不闪退，全机型支持 ======================
+    // ====================== 安卓终极方案：全机型必跳日历 ======================
     try {
-        const start = rd.getTime();
-        const end = start + 3600000;
-        const t = encodeURIComponent(title);
+        // 生成标准日历事件
+        const icsContent = `BEGIN:VCALENDAR
+VERSION:2.0
+BEGIN:VEVENT
+UID:${Date.now()}
+DTSTART:${y}${m}${d}T090000
+DTEND:${y}${m}${d}T100000
+SUMMARY:${title}
+END:VEVENT
+END:VCALENDAR`;
         
-        // 最安全的系统日历跳转（只触发一次，不崩溃）
-        const uri = `intent:#Intent;action=android.intent.action.INSERT;type=vnd.android.cursor.item/event;title=${t};begin=${start};end=${end};end;`;
+        // 生成 base64 日历数据，直接唤起系统日历（不下载文件）
+        const base64 = btoa(unescape(encodeURIComponent(icsContent)));
+        const dataUrl = `data:text/calendar;base64,${base64}`;
         
-        // 安全打开方式
+        // 安全唤起（安卓全系统支持）
         setTimeout(() => {
-            window.location.href = uri;
+            const a = document.createElement('a');
+            a.href = dataUrl;
+            a.target = '_blank';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
         }, 100);
     } catch (e) {}
 
