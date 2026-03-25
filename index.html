@@ -193,7 +193,7 @@
     </div>
 
     <script>
-        // ==================== 多语言 ====================
+        // 多语言
         const isEnglish = navigator.language.toLowerCase().includes('en');
         const i18n = {
             pageTitle: isEnglish ? 'Filter Replacement Reminder' : '滤芯更换提醒',
@@ -207,12 +207,13 @@
             confirmBtn: isEnglish ? 'Set Reminder' : '确认设置提醒',
             selectDate: isEnglish ? 'Please select install date first' : '请先选择安装日期',
             dateInvalid: isEnglish ? 'Expiration date must be after today' : '更换日期必须晚于今天',
-            wechatTip: isEnglish ? 'WeChat cannot open calendar. Please open in system browser.' : '微信无法调用日历，请在浏览器中打开',
-            success: isEnglish ? '✅ Calendar reminder created successfully' : '✅ 日历提醒已生成',
-            errorDate: isEnglish ? 'Please select valid date' : '请选择有效日期',
-            errorEmail: isEnglish ? 'Invalid email format' : '邮箱格式错误'
+            wechatTip: isEnglish ? 'Open in system browser' : '微信无法调用日历，请在浏览器中打开',
+            success: isEnglish ? '✅ Calendar reminder created' : '✅ 日历提醒已生成',
+            errorDate: isEnglish ? 'Select valid date' : '请选择有效日期',
+            errorEmail: isEnglish ? 'Invalid email' : '邮箱格式错误'
         };
 
+        // 应用语言
         document.getElementById('pageTitle').innerText = i18n.pageTitle;
         document.getElementById('pageDesc').innerText = i18n.pageDesc;
         document.getElementById('formTitle').innerText = i18n.formTitle;
@@ -224,20 +225,15 @@
         document.getElementById('confirmBtn').innerText = i18n.confirmBtn;
         document.getElementById('remindDateDisplay').innerText = i18n.selectDate;
 
-        const select = document.getElementById('remindDays');
-        Array.from(select.options).forEach(opt => {
-            opt.textContent = isEnglish ? opt.dataset.en : opt.dataset.cn;
-        });
+        // 下拉框语言
+        const sel = document.getElementById('remindDays');
+        Array.from(sel.options).forEach(o => o.textContent = isEnglish ? o.dataset.en : o.dataset.cn);
 
-        // ==================== 工具 ====================
-        const formatDate = (date) => {
-            const y = date.getFullYear();
-            const m = String(date.getMonth() + 1).padStart(2, '0');
-            const d = String(date.getDate()).padStart(2, '0');
-            return `${y}/${m}/${d}`;
-        };
+        // 工具
+        const formatDate = d => `${d.getFullYear()}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')}`;
+        const pad = n => String(n).padStart(2, '0');
 
-        // ==================== DOM ====================
+        // DOM
         const confirmBtn = document.getElementById('confirmBtn');
         const installDateInput = document.getElementById('installDate');
         const remindDateDisplay = document.getElementById('remindDateDisplay');
@@ -246,17 +242,14 @@
         const userEmailInput = document.getElementById('userEmail');
         const remindDaysSelect = document.getElementById('remindDays');
 
-        // ==================== 初始化日期 ====================
+        // 初始化
         function initDefaultDate() {
-            const today = new Date();
-            const y = today.getFullYear();
-            const m = String(today.getMonth() + 1).padStart(2, '0');
-            const d = String(today.getDate()).padStart(2, '0');
-            installDateInput.value = `${y}-${m}-${d}`;
+            const d = new Date();
+            installDateInput.value = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
             installDateInput.dispatchEvent(new Event('change'));
         }
 
-        // ==================== 日期选择 ====================
+        // 日期选择
         installDateInput.addEventListener('change', function () {
             const val = this.value;
             messageBox.className = 'message';
@@ -269,91 +262,68 @@
                 return;
             }
 
-            const installDate = new Date(val);
-            const remindDate = new Date(installDate);
-            remindDate.setFullYear(installDate.getFullYear() + 1);
+            const install = new Date(val);
+            const expire = new Date(install);
+            expire.setFullYear(install.getFullYear() + 1);
 
             const today = new Date();
-            const todayOnly = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-            const remindOnly = new Date(remindDate.getFullYear(), remindDate.getMonth(), remindDate.getDate());
+            const todayNorm = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+            const expireNorm = new Date(expire.getFullYear(), expire.getMonth(), expire.getDate());
 
-            if (remindOnly <= todayOnly) {
-                remindDateDisplay.textContent = formatDate(remindDate);
+            if (expireNorm <= todayNorm) {
+                remindDateDisplay.textContent = formatDate(expire);
                 showMessage(i18n.dateInvalid, 'error');
                 confirmBtn.disabled = true;
                 window.remindDate = null;
                 return;
             }
 
-            remindDateDisplay.textContent = formatDate(remindDate);
+            remindDateDisplay.textContent = formatDate(expire);
             confirmBtn.disabled = false;
-            window.remindDate = remindDate;
+            window.remindDate = expire;
         });
 
-        // ==================== 核心：唤起日历（无弹窗） ====================
+        // 核心：日历唤起（iOS + Android 都能自动创建事件）
         function setReminder() {
-            const remindDate = window.remindDate;
+            const rd = window.remindDate;
             const email = userEmailInput.value.trim();
+            const days = parseInt(remindDaysSelect.value);
 
-            if (!remindDate) {
-                showMessage(i18n.selectDate, 'error');
-                return;
-            }
-            if (email && !validateEmail(email)) {
-                showMessage(i18n.errorEmail, 'error');
-                return;
-            }
+            if (!rd) { showMessage(i18n.selectDate, 'error'); return; }
+            if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { showMessage(i18n.errorEmail, 'error'); return; }
+            if (navigator.userAgent.toLowerCase().includes('micromessenger')) { wechatTip.innerText = i18n.wechatTip; wechatTip.style.display = 'block'; return; }
 
-            if (isWechatBrowser()) {
-                wechatTip.innerText = i18n.wechatTip;
-                wechatTip.style.display = "block";
-                return;
-            }
-
-            const y = remindDate.getFullYear();
-            const m = String(remindDate.getMonth() + 1).padStart(2, '0');
-            const d = String(remindDate.getDate()).padStart(2, '0');
+            const y = rd.getFullYear(), m = pad(rd.getMonth()+1), d = pad(rd.getDate());
             const title = isEnglish ? "Filter Replacement" : "滤芯更换提醒";
 
-            // iOS
-            if (isIOS()) {
-                window.location.href = `calshow:${y}-${m}-${d}?title=${encodeURIComponent(title)}`;
-                showMessage(`${i18n.success}：${formatDate(remindDate)}`, 'success');
-                return;
-            }
-
-            // Android
-            try {
-                const ics = `BEGIN:VCALENDAR
+            // 生成日历事件
+            const ics = `BEGIN:VCALENDAR
 VERSION:2.0
 BEGIN:VEVENT
+UID:${Date.now()}
 DTSTART:${y}${m}${d}T090000
 DTEND:${y}${m}${d}T100000
 SUMMARY:${title}
+BEGIN:VALARM
+TRIGGER:-P${days}D
+END:VALARM
 END:VEVENT
 END:VCALENDAR`;
-                const blob = new Blob([ics], { type: 'text/calendar' });
-                const url = URL.createObjectURL(blob);
-                window.location.href = url;
-                setTimeout(() => URL.revokeObjectURL(url), 100);
-            } catch (e) {}
 
-            showMessage(`${i18n.success}：${formatDate(remindDate)}`, 'success');
+            const blob = new Blob([ics], { type: 'text/calendar' });
+            const url = URL.createObjectURL(blob);
+            window.location.href = url;
+            setTimeout(() => URL.revokeObjectURL(url), 500);
+
+            showMessage(`${i18n.success}：${formatDate(rd)}`, 'success');
         }
 
-        // ==================== 工具判断 ====================
-        function isWechatBrowser() { return navigator.userAgent.toLowerCase().includes('micromessenger'); }
-        function isIOS() { return /iphone|ipad|ipod/.test(navigator.userAgent.toLowerCase()); }
-        function validateEmail(e) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e); }
-
-        // ==================== 提示 ====================
+        // 提示
         function showMessage(text, type) {
             messageBox.textContent = text;
             messageBox.className = `message ${type}`;
             wechatTip.style.display = 'none';
-            if (type === 'error') {
-                setTimeout(() => messageBox.className = 'message', 4000);
-            }
+            if (type === 'error') setTimeout(() => messageBox.className = 'message', 4000);
         }
 
         window.onload = initDefaultDate;
