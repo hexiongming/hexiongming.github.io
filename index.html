@@ -255,7 +255,13 @@
         const sel = document.getElementById('remindDays');
         Array.from(sel.options).forEach(o => o.textContent = isEnglish ? o.dataset.en : o.dataset.cn);
 
-        const formatDate = d => `${d.getFullYear()}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')}`;
+        const formatDate = d => {
+          if (isEnglish) {
+            return `${pad(d.getMonth() + 1)}/${pad(d.getDate())}/${d.getFullYear()}`;
+          } else {
+            return `${d.getFullYear()}/${pad(d.getMonth()+1)}/${pad(d.getDate())}`;
+          }
+        };
         const pad = n => String(n).padStart(2, '0');
 
         const confirmBtn = document.getElementById('confirmBtn');
@@ -413,7 +419,7 @@ END:VCALENDAR`;
         a.click();
         document.body.removeChild(a);
 
-        showMessage(`${i18n.success}：已打开日历新建日程`, 'success');
+        showMessage(`${i18n.success}`, 'success');
     } catch (e) {
         showMessage(`请打开系统日历手动添加：${title} ${formatDate(rd)}`, 'success');
     }
