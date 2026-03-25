@@ -90,6 +90,26 @@
             margin-top: 5px;
         }
 
+        /* 邮箱下拉框样式 */
+        .email-wrapper {
+            position: relative;
+            width: 100%;
+        }
+        .email-suffix-select {
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            border: none;
+            background: transparent;
+            color: #0078d7;
+            font-size: 14px;
+            padding: 5px;
+            cursor: pointer;
+            outline: none;
+            width: auto;
+        }
+
         .confirm-btn {
             width: 100%;
             padding: 14px;
@@ -182,7 +202,24 @@
 
             <div class="form-group">
                 <label id="labelEmail" for="userEmail">接收邮箱（可选）</label>
-                <input type="email" id="userEmail" placeholder="填写后可同步接收邮件提醒">
+                <div class="email-wrapper">
+                    <input type="text" id="userEmail" placeholder="填写后可同步接收邮件提醒">
+                    <select class="email-suffix-select" id="emailSuffix">
+                        <option value="">请选择邮箱后缀</option>
+                        <option value="@qq.com">@qq.com</option>
+                        <option value="@163.com">@163.com</option>
+                        <option value="@126.com">@126.com</option>
+                        <option value="@gmail.com">@gmail.com</option>
+                        <option value="@outlook.com">@outlook.com</option>
+                        <option value="@hotmail.com">@hotmail.com</option>
+                        <option value="@icloud.com">@icloud.com</option>
+                        <option value="@foxmail.com">@foxmail.com</option>
+                        <option value="@sina.com">@sina.com</option>
+                        <option value="@sohu.com">@sohu.com</option>
+                        <option value="@yahoo.com">@yahoo.com</option>
+                        <option value="@yahoo.com.cn">@yahoo.com.cn</option>
+                    </select>
+                </div>
             </div>
 
             <button class="confirm-btn" id="confirmBtn" disabled onclick="setReminder()">确认设置提醒</button>
@@ -241,6 +278,16 @@
         const wechatTip = document.getElementById('wechatTip');
         const userEmailInput = document.getElementById('userEmail');
         const remindDaysSelect = document.getElementById('remindDays');
+        const emailSuffixSelect = document.getElementById('emailSuffix');
+
+        // 邮箱后缀选择
+        emailSuffixSelect.addEventListener('change', function () {
+            const suffix = this.value;
+            if (!suffix) return;
+            let val = userEmailInput.value.trim();
+            if (val.includes('@')) val = val.split('@')[0];
+            userEmailInput.value = val + suffix;
+        });
 
         // 初始化
         function initDefaultDate() {
@@ -283,7 +330,7 @@
             window.remindDate = expire;
         });
 
-        // 全平台唤起日历（无下载，安卓跳官方日历页面）
+        // 全平台唤起日历
         function setReminder() {
             const rd = window.remindDate;
             const email = userEmailInput.value.trim();
@@ -298,7 +345,7 @@
             const startTime = rd.getTime();
             const endTime = startTime + 3600000;
 
-            // -------------------- iOS：直接弹日历 --------------------
+            // iOS
             if (/iphone|ipad|ipod/.test(ua)) {
                 const dateStr = `${rd.getFullYear()}${pad(rd.getMonth()+1)}${pad(rd.getDate())}`;
                 const ics = `BEGIN:VCALENDAR
@@ -319,14 +366,10 @@ END:VCALENDAR`;
                 return;
             }
 
-            // -------------------- 安卓：跳系统日历官方添加页面 --------------------
-            const androidCalendarUrl = `content://com.android.calendar/events?title=${encodeURIComponent(title)}&beginTime=${startTime}&endTime=${endTime}`;
-            try {
-                // 方案1：系统日历
-                window.location.href = androidCalendarUrl;
-            } catch(e) {}
+            // 安卓
+            const androidUrl = `content://com.android.calendar/events?title=${encodeURIComponent(title)}&beginTime=${startTime}&endTime=${endTime}`;
+            try { window.location.href = androidUrl; } catch (e) {}
 
-            // 方案2：谷歌日历（备用）
             setTimeout(() => {
                 window.open(`https://calendar.google.com/calendar/r/eventedit?text=${encodeURIComponent(title)}&dates=${Math.floor(startTime/1000)}/${Math.floor(endTime/1000)}`, '_blank');
             }, 500);
