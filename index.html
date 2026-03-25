@@ -68,7 +68,9 @@
             font-size: 14px;
         }
 
-        input[type="date"] {
+        input[type="date"],
+        input[type="email"],
+        select {
             width: 100%;
             padding: 12px 15px;
             border: 1px solid #ddd;
@@ -78,21 +80,9 @@
             transition: border 0.3s;
         }
 
-        input[type="date"]:focus {
-            border-color: #0078d7;
-        }
-
-        input[type="email"] {
-            width: 100%;
-            padding: 12px 15px;
-            border: 1px solid #ddd;
-            border-radius: 6px;
-            font-size: 16px;
-            outline: none;
-            transition: border 0.3s;
-        }
-
-        input[type="email"]:focus {
+        input[type="date"]:focus,
+        input[type="email"]:focus,
+        select:focus {
             border-color: #0078d7;
         }
 
@@ -126,7 +116,7 @@
 
         .confirm-btn:disabled {
             background-color: #cccccc;
-            color: #99999;
+            color: #999999;
             cursor: not-allowed;
             pointer-events: none;
         }
@@ -186,6 +176,17 @@
             </div>
 
             <div class="form-group">
+                <label for="remindDays">提前提醒天数（可选，1-30天）</label>
+                <select id="remindDays">
+                    <option value="1">1天</option>
+                    <option value="3" selected>3天</option>
+                    <option value="7">7天</option>
+                    <option value="15">15天</option>
+                    <option value="30">30天</option>
+                </select>
+            </div>
+
+            <div class="form-group">
                 <label for="userEmail">接收邮箱（选填）</label>
                 <input type="email" id="userEmail" placeholder="填写后可同步接收邮件提醒">
             </div>
@@ -200,9 +201,11 @@
     <script>
         const confirmBtn = document.getElementById('confirmBtn');
         const installDateInput = document.getElementById('installDate');
+        const remindDateDisplay = document.getElementById('remindDateDisplay');
         const messageBox = document.getElementById('messageBox');
         const wechatTip = document.getElementById('wechatTip');
         const userEmailInput = document.getElementById('userEmail');
+        const remindDaysSelect = document.getElementById('remindDays');
 
         // 格式化日期
         const formatDate = (date) => {
@@ -215,49 +218,58 @@
         // 初始化默认日期
         function initDefaultDate() {
             const today = new Date();
-            const y = today.getFullYear(), m = String(today.getMonth()+1).padStart(2,0), d = String(today.getDate()).padStart(2,0);
+            const y = today.getFullYear();
+            const m = String(today.getMonth() + 1).padStart(2, '0');
+            const d = String(today.getDate()).padStart(2, '0');
             installDateInput.value = `${y}-${m}-${d}`;
             installDateInput.dispatchEvent(new Event('change'));
         }
 
         // 日期监听
-        installDateInput.addEventListener('change', function() {
+        installDateInput.addEventListener('change', function () {
             const val = this.value;
             messageBox.className = 'message';
             wechatTip.style.display = 'none';
 
             if (!val) {
                 remindDateDisplay.textContent = '请先选择安装日期';
-                confirmBtn.disabled = true; window.remindDate = null; return;
+                confirmBtn.disabled = true;
+                window.remindDate = null;
+                return;
             }
 
-            const install = new Date(val);
-            const remind = new Date(install); remind.setFullYear(install.getFullYear()+1);
+            const installDate = new Date(val);
+            const remindDate = new Date(installDate);
+            remindDate.setFullYear(installDate.getFullYear() + 1);
+
             const today = new Date();
             const todayOnly = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-            const remindOnly = new Date(remind.getFullYear(), remind.getMonth(), remind.getDate());
+            const remindOnly = new Date(remindDate.getFullYear(), remindDate.getMonth(), remindDate.getDate());
 
             if (remindOnly <= todayOnly) {
-                remindDateDisplay.textContent = formatDate(remind);
+                remindDateDisplay.textContent = formatDate(remindDate);
                 showMessage(`更换日期必须晚于 ${formatDate(todayOnly)}`, 'error');
-                confirmBtn.disabled = true; window.remindDate = null; return;
+                confirmBtn.disabled = true;
+                window.remindDate = null;
+                return;
             }
 
-            remindDateDisplay.textContent = formatDate(remind);
+            remindDateDisplay.textContent = formatDate(remindDate);
             confirmBtn.disabled = false;
-            window.remindDate = remind;
+            window.remindDate = remindDate;
         });
 
-        // 核心：设置提醒
+        // 核心：全平台直接唤起日历
         function setReminder() {
             const remindDate = window.remindDate;
             const installDate = installDateInput.value;
             const email = userEmailInput.value.trim();
+            const remindDays = parseInt(remindDaysSelect.value);
 
             if (!remindDate) { showMessage('请选择有效日期', 'error'); return; }
             if (email && !validateEmail(email)) { showMessage('邮箱格式错误', 'error'); return; }
 
-            // 微信内置浏览器：强制提示用系统浏览器
+            // 微信浏览器：提示
             if (isWechatBrowser()) {
                 wechatTip.innerHTML = "⚠️ 微信无法调用日历<br>请点击右上角 → 在浏览器中打开";
                 wechatTip.style.display = "block";
@@ -265,67 +277,68 @@
                 return;
             }
 
-            // 非微信：生成标准日历事件
-            const title = "滤芯更换提醒";
-            const content = `安装日期：${installDate.replace(/-/g,'/')}\n请按时更换滤芯`;
-            const ics = generateICS(remindDate, title, content);
-            downloadICS(ics, formatDate(remindDate));
+            // 生成日历数据
+            const y = remindDate.getFullYear();
+            const m = String(remindDate.getMonth() + 1).padStart(2, '0');
+            const d = String(remindDate.getDate()).padStart(2, '0');
+            const dateStr = `${y}-${m}-${d}`;
+            const title = encodeURIComponent(`滤芯更换提醒`);
+            const desc = encodeURIComponent(`安装日期：${installDate.replace(/-/g, '/')}\n提前${remindDays}天提醒更换滤芯`);
 
-            showMessage(`✅ 日历提醒已生成：${formatDate(remindDate)}`, 'success');
+            // 全平台统一：使用 webcal 协议直接唤起日历
+            const webcalUrl = `webcal://${window.location.host}/add?title=${title}&date=${dateStr}&description=${desc}&remind=${remindDays}`;
+            const icsUrl = `data:text/calendar;charset=utf-8,${encodeURIComponent(generateFullICS(remindDate, remindDays, installDate))}`;
+
+            // 优先唤起日历，失败自动降级
+            window.location.href = webcalUrl;
+            setTimeout(() => {
+                window.location.href = icsUrl;
+            }, 300);
+
+            showMessage(`✅ 已打开日历：${formatDate(remindDate)} 更换（提前${remindDays}天提醒）`, 'success');
         }
 
-        // 判断微信浏览器
-        function isWechatBrowser() {
-            const ua = navigator.userAgent.toLowerCase();
-            return ua.includes('micromessenger');
-        }
-
-        // 生成标准ICS日历文件（所有手机都支持）
-        function generateICS(date, title, desc) {
+        // 生成完整日历事件（含提醒）
+        function generateFullICS(date, days, installDate) {
             const y = date.getFullYear(), m = String(date.getMonth()+1).padStart(2,0), d = String(date.getDate()).padStart(2,0);
             const start = `${y}${m}${d}T090000`;
             const end = `${y}${m}${d}T100000`;
 
-            return `
-BEGIN:VCALENDAR
+            return `BEGIN:VCALENDAR
 VERSION:2.0
-PRODID:-//Filter Reminder//CN
+PRODID:-//Filter//CN
 BEGIN:VEVENT
 UID:${Date.now()}
 DTSTAMP:${start}
 DTSTART:${start}
 DTEND:${end}
-SUMMARY:${title}
-DESCRIPTION:${desc}
+SUMMARY:滤芯更换提醒
+DESCRIPTION:安装日期：${installDate.replace(/-/g,'/')}
 BEGIN:VALARM
-TRIGGER:-P1D
+TRIGGER:-P${days}D
 ACTION:DISPLAY
-DESCRIPTION:${title}
+DESCRIPTION:滤芯即将到期，请更换
 END:VALARM
 END:VEVENT
-END:VCALENDAR`.replace(/\s+/g, '\r\n');
+END:VCALENDAR`.replace(/\n/g, '\r\n');
         }
 
-        // 下载并打开日历
-        function downloadICS(icsContent, dateStr) {
-            const blob = new Blob([icsContent], { type: 'text/calendar' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `滤芯更换提醒_${dateStr.replace(/\//g,'-')}.ics`;
-            a.click();
-            setTimeout(() => URL.revokeObjectURL(url), 100);
+        // 判断微信
+        function isWechatBrowser() {
+            return navigator.userAgent.toLowerCase().includes('micromessenger');
         }
 
         // 邮箱验证
-        function validateEmail(e) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e); }
+        function validateEmail(e) {
+            return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
+        }
 
         // 提示
         function showMessage(text, type) {
             messageBox.textContent = text;
             messageBox.className = `message ${type}`;
             wechatTip.style.display = 'none';
-            setTimeout(() => { messageBox.className = 'message'; }, 4000);
+            setTimeout(() => messageBox.className = 'message', 4000);
         }
 
         window.onload = initDefaultDate;
