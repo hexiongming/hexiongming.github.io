@@ -334,7 +334,7 @@
             }
         });
 
-// ====================== 安卓终极方案：直接跳日历编辑页面（不下载ICS） ======================
+// ====================== 最终方案：系统日历优先 + 自动降级Google日历 ======================
 function setReminder() {
     const rd = window.remindDate;
     const email = userEmailInput.value.trim();
@@ -346,8 +346,10 @@ function setReminder() {
 
     const y = rd.getFullYear(), m = pad(rd.getMonth()+1), d = pad(rd.getDate());
     const title = isEnglish ? "Filter Replacement" : "滤芯更换提醒";
+    const start = rd.getTime();
+    const end = start + 3600000;
 
-    // iOS 正常
+    // iOS 保持不变
     if (/iphone|ipad/.test(navigator.userAgent.toLowerCase())) {
         const ics = `BEGIN:VCALENDAR
 VERSION:2.0
@@ -369,12 +371,25 @@ END:VCALENDAR`;
         return;
     }
 
-    // -------------------- 安卓：Google 日历官方标准链接（全球通用，直接跳转新建页面） --------------------
-    const startDate = `${y}-${m}-${d}`;
-    const gCalUrl = `https://calendar.google.com/calendar/r/eventedit?text=${encodeURIComponent(title)}&dates=${y}${m}${d}/${y}${m}${d}`;
-    
-    // 直接打开，不下载ICS，不闪退
-    window.open(gCalUrl, '_blank');
+    // ====================== 安卓：系统日历优先，失败自动打开Google日历 ======================
+    try {
+        // 1. 优先尝试打开【系统日历】（华为/vivo/小米/OPPO通用）
+        const systemIntent = `intent:#Intent;action=android.intent.action.INSERT;type=vnd.android.cursor.item/event;title=${encodeURIComponent(title)};begin=${start};end=${end};end;`;
+        
+        // 安全打开方式（不闪退）
+        const a = document.createElement('a');
+        a.href = systemIntent;
+        a.style.display = 'none';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+
+        // 2. 延迟 800ms 检测：如果系统日历没打开，自动打开 Google 日历（兜底方案）
+        setTimeout(() => {
+            const gCalUrl = `https://calendar.google.com/calendar/r/eventedit?text=${encodeURIComponent(title)}&dates=${y}${m}${d}/${y}${m}${d}`;
+            window.open(gCalUrl, '_blank');
+        }, 800);
+    } catch (e) {}
 
     showMessage(`${i18n.success}：${formatDate(rd)}`, 'success');
 }
