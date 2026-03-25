@@ -372,26 +372,74 @@ END:VCALENDAR`;
     }
 
     // ====================== 安卓：系统日历优先，失败自动打开Google日历 ======================
-    try {
-        // 1. 优先尝试打开【系统日历】（华为/vivo/小米/OPPO通用）
-        const systemIntent = `intent:#Intent;action=android.intent.action.INSERT;type=vnd.android.cursor.item/event;title=${encodeURIComponent(title)};begin=${start};end=${end};end;`;
-        
-        // 安全打开方式（不闪退）
-        const a = document.createElement('a');
-        a.href = systemIntent;
-        a.style.display = 'none';
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
+    // ====================== 安卓：使用标准Intent跳转系统日历 ======================
+try {
+    // 1. 构建标准日历Intent (核心修改)
+    const calendarIntent = `intent://eventedit?${new URLSearchParams({
+        title: title,
+        begin: start,
+        end: end
+    }).toString()}#Intent;scheme=content;type=vnd.android.cursor.item/event;action=android.intent.action.INSERT;package=com.android.calendar;end`;
 
-        // 2. 延迟 800ms 检测：如果系统日历没打开，自动打开 Google 日历（兜底方案）
-        setTimeout(() => {
-            const gCalUrl = `https://calendar.google.com/calendar/r/eventedit?text=${encodeURIComponent(title)}&dates=${y}${m}${d}/${y}${m}${d}`;
+    // 2. 备用Intent方案，增加兼容性
+    const fallbackIntent = `intent://eventedit?${new URLSearchParams({
+        title: title,
+        begin: start,
+        end: end
+    }).toString()}#Intent;scheme=content;type=vnd.android.cursor.item/event;action=android.intent.action.INSERT;package=com.google.android.calendar;S.browser_fallback_url=${encodeURIComponent(`https://calendar.google.com/calendar/r/eventedit?text=${encodeURIComponent(title)}&dates=${y}${m}${d}T090000/${y}${m}${d}T100000`)};end`;
+
+    // 3. 执行跳转
+    const a = document.createElement('a');
+    a.href = calendarIntent;
+    a.style.display = 'none';
+    document.body.appendChild(a);
+    
+    // 设置一个超时检测，如果跳转失败，尝试备用方案
+    let timer = setTimeout(() => {
+        if (document.body.contains(a)) {
+            document.body.removeChild(a);
+            // 尝试备用Intent（针对部分品牌定制日历）
+            const fallbackA = document.createElement('a');
+            fallbackA.href = fallbackIntent;
+            fallbackA.style.display = 'none';
+            document.body.appendChild(fallbackA);
+            fallbackA.click();
+            setTimeout(() => document.body.removeChild(fallbackA), 100);
+        }
+    }, 500);
+    
+    // 绑定页面隐藏事件，如果页面隐藏说明跳转成功
+    const handleVisibilityChange = () => {
+        if (document.hidden) {
+            clearTimeout(timer);
+            // 跳转成功，移除元素
+            setTimeout(() => {
+                if (document.body.contains(a)) {
+                    document.body.removeChild(a);
+                }
+            }, 1000);
+        }
+    };
+    
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    
+    a.click();
+    
+    // 4. 最终兜底：如果上述Intent都失败，1.5秒后打开Google日历网页版
+    setTimeout(() => {
+        document.removeEventListener('visibilitychange', handleVisibilityChange);
+        if (document.body.contains(a)) {
+            document.body.removeChild(a);
+            const gCalUrl = `https://calendar.google.com/calendar/r/eventedit?text=${encodeURIComponent(title)}&dates=${y}${m}${d}T090000/${y}${m}${d}T100000&details=${encodeURIComponent(isEnglish ? `Filter replacement reminder set for ${formatDate(rd)}` : `滤芯更换提醒，设定日期：${formatDate(rd)}`)}`;
             window.open(gCalUrl, '_blank');
-        }, 800);
-    } catch (e) {}
-
-    showMessage(`${i18n.success}：${formatDate(rd)}`, 'success');
+        }
+    }, 1500);
+    
+} catch (e) {
+    console.error('Calendar intent error:', e);
+    // 异常捕获兜底：直接打开Google日历
+    const gCalUrl = `https://calendar.google.com/calendar/r/eventedit?text=${encodeURIComponent(title)}&dates=${y}${m}${d}T090000/${y}${m}${d}T100000`;
+    window.open(gCalUrl, '_blank');
 }
 
         function showMessage(text, type) {
