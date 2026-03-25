@@ -341,6 +341,7 @@
         });
 
 // ====================== 最终完美方案：安卓主流厂商日历 DeepLink 直达 ======================
+// ====================== 优化版 DeepLink 唤起日历（安卓+iOS） ======================
 function setReminder() {
     const rd = window.remindDate;
     const email = userEmailInput.value.trim();
@@ -355,74 +356,47 @@ function setReminder() {
         showMessage(i18n.errorEmail, 'error');
         return;
     }
-    if (navigator.userAgent.toLowerCase().includes('micromessenger')) {
+
+    const ua = navigator.userAgent.toLowerCase();
+    // 微信内置浏览器直接拦截所有DeepLink，必须提示
+    if (ua.includes('micromessenger')) {
         wechatTip.innerText = i18n.wechatTip;
         wechatTip.style.display = 'block';
         return;
     }
 
-    const y = rd.getFullYear();
-    const m = rd.getMonth();
-    const d = rd.getDate();
     const title = isEnglish ? "Filter Replacement" : "滤芯更换提醒";
     const beginTime = rd.getTime();
-    const endTime = beginTime + 3600 * 1000;
+    const endTime = beginTime + 3600 * 1000; // 持续1小时
     const alarmMinutes = days * 24 * 60;
+    let scheme = '';
 
-    // -------------------- iOS --------------------
-    if (/iphone|ipad/.test(navigator.userAgent.toLowerCase())) {
-        const ics = `BEGIN:VCALENDAR
-VERSION:2.0
-BEGIN:VEVENT
-UID:${Date.now()}
-DTSTART:${y}${pad(m+1)}${pad(d)}T090000
-DTEND:${y}${pad(m+1)}${pad(d)}T100000
-SUMMARY:${title}
-BEGIN:VALARM
-TRIGGER:-P${days}D
-END:VALARM
-END:VEVENT
-END:VCALENDAR`;
-        const blob = new Blob([ics], { type: 'text/calendar' });
-        const url = URL.createObjectURL(blob);
-        window.location.href = url;
-        setTimeout(() => URL.revokeObjectURL(url), 500);
-        showMessage(`${i18n.success}：${formatDate(rd)}`, 'success');
-        return;
+    // iOS
+    if (/iphone|ipad|ipod/.test(ua)) {
+        // iOS 用 x-apple-reminder 或 ical，最稳
+        scheme = `x-apple-reminder://add?title=${encodeURIComponent(title)}&date=${beginTime}`;
     }
-
-    // -------------------- 安卓 主流厂商 DeepLink --------------------
-    const userAgent = navigator.userAgent.toLowerCase();
-    let deeplink = '';
-
-    if (userAgent.includes('xiaomi') || userAgent.includes('redmi')) {
-        deeplink = `miui-calendar://event/new?begin=${beginTime}&end=${endTime}&title=${encodeURIComponent(title)}&minutes=${alarmMinutes}`;
-    } else if (userAgent.includes('huawei') || userAgent.includes('honor')) {
-        deeplink = `hwcalendarscheme://newevent?beginTime=${beginTime}&endTime=${endTime}&title=${encodeURIComponent(title)}&alarmMinutes=${alarmMinutes}`;
-    } else if (userAgent.includes('vivo') || userAgent.includes('iqoo')) {
-        deeplink = `vcalendarscheme://newevent?begin=${beginTime}&end=${endTime}&title=${encodeURIComponent(title)}`;
-    } else if (userAgent.includes('oppo') || userAgent.includes('realme') || userAgent.includes('oneplus')) {
-        deeplink = `ocls://calendar/event/create?beginTime=${beginTime}&endTime=${endTime}&title=${encodeURIComponent(title)}`;
-    } else if (userAgent.includes('samsung')) {
-        deeplink = `samsung-calendar://event/new?begin=${beginTime}&end=${endTime}&title=${encodeURIComponent(title)}`;
+    // 安卓各厂商
+    else if (ua.includes('xiaomi') || ua.includes('redmi')) {
+        scheme = `miui-calendar://event/new?begin=${beginTime}&end=${endTime}&title=${encodeURIComponent(title)}&minutes=${alarmMinutes}`;
+    } else if (ua.includes('huawei') || ua.includes('honor')) {
+        scheme = `hwcalendarscheme://newevent?beginTime=${beginTime}&endTime=${endTime}&title=${encodeURIComponent(title)}&alarmMinutes=${alarmMinutes}`;
+    } else if (ua.includes('vivo') || ua.includes('iqoo')) {
+        scheme = `vcalendarscheme://newevent?begin=${beginTime}&end=${endTime}&title=${encodeURIComponent(title)}&alarm=${alarmMinutes}`;
+    } else if (ua.includes('oppo') || ua.includes('realme') || ua.includes('oneplus')) {
+        scheme = `ocls://calendar/event/create?beginTime=${beginTime}&endTime=${endTime}&title=${encodeURIComponent(title)}`;
+    } else if (ua.includes('samsung')) {
+        scheme = `samsung-calendar://event/new?begin=${beginTime}&end=${endTime}&title=${encodeURIComponent(title)}`;
     } else {
-        deeplink = `content://com.android.calendar/events/new?begin=${beginTime}&end=${endTime}&title=${encodeURIComponent(title)}`;
+        // 安卓通用标准 Intent（所有安卓手机必支持，最兜底）
+        scheme = `intent://calendars#Intent;scheme=content;action=android.intent.action.INSERT;type=vnd.android.cursor.item/event;S.title=${encodeURIComponent(title)};L.beginTime=${beginTime};L.endTime=${endTime};end`;
     }
 
-    // 执行跳转
-    try {
-        const a = document.createElement('a');
-        a.href = deeplink;
-        a.target = '_blank';
-        a.style.display = 'none';
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-
-        showMessage(`${i18n.success}`, 'success');
-    } catch (e) {
-        showMessage(`请打开系统日历手动添加：${title} ${formatDate(rd)}`, 'success');
-    }
+    // 核心：延时跳转，避免浏览器拦截
+    setTimeout(() => {
+        window.location.href = scheme;
+        showMessage(`${i18n.success}，即将打开系统日历`, 'success');
+    }, 200);
 }
         function showMessage(text, type) {
             messageBox.textContent = text;
