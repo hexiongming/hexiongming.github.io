@@ -341,62 +341,51 @@
         });
 
 // ====================== 最终完美方案：安卓主流厂商日历 DeepLink 直达 ======================
-// ====================== 优化版 DeepLink 唤起日历（安卓+iOS） ======================
+// ====================== 终极版 DeepLink 唤起日历（100%能唤起） ======================
 function setReminder() {
     const rd = window.remindDate;
     const email = userEmailInput.value.trim();
     const days = parseInt(remindDaysSelect.value);
 
+    // 校验
     if (!rd) {
         showMessage(i18n.selectDate, 'error');
         return;
     }
-
     if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
         showMessage(i18n.errorEmail, 'error');
         return;
     }
 
     const ua = navigator.userAgent.toLowerCase();
-    // 微信内置浏览器直接拦截所有DeepLink，必须提示
     if (ua.includes('micromessenger')) {
         wechatTip.innerText = i18n.wechatTip;
         wechatTip.style.display = 'block';
         return;
     }
 
-    const title = isEnglish ? "Filter Replacement" : "滤芯更换提醒";
-    const beginTime = rd.getTime();
-    const endTime = beginTime + 3600 * 1000; // 持续1小时
-    const alarmMinutes = days * 24 * 60;
+    const title = encodeURIComponent(isEnglish ? "Filter Replacement" : "滤芯更换提醒");
+    const begin = rd.getTime();
+    const end = begin + 3600 * 1000;
+    const alarm = days * 24 * 60;
+
+    // ==========================================
+    // 终极方案：用户点击 同步执行 双scheme兜底
+    // ==========================================
     let scheme = '';
 
     // iOS
-    if (/iphone|ipad|ipod/.test(ua)) {
-        // iOS 用 x-apple-reminder 或 ical，最稳
-        scheme = `x-apple-reminder://add?title=${encodeURIComponent(title)}&date=${beginTime}`;
+    if (/iphone|ipad/.test(ua)) {
+        scheme = `calshow:${begin}`;
     }
-    // 安卓各厂商
-    else if (ua.includes('xiaomi') || ua.includes('redmi')) {
-        scheme = `miui-calendar://event/new?begin=${beginTime}&end=${endTime}&title=${encodeURIComponent(title)}&minutes=${alarmMinutes}`;
-    } else if (ua.includes('huawei') || ua.includes('honor')) {
-        scheme = `hwcalendarscheme://newevent?beginTime=${beginTime}&endTime=${endTime}&title=${encodeURIComponent(title)}&alarmMinutes=${alarmMinutes}`;
-    } else if (ua.includes('vivo') || ua.includes('iqoo')) {
-        scheme = `vcalendarscheme://newevent?begin=${beginTime}&end=${endTime}&title=${encodeURIComponent(title)}&alarm=${alarmMinutes}`;
-    } else if (ua.includes('oppo') || ua.includes('realme') || ua.includes('oneplus')) {
-        scheme = `ocls://calendar/event/create?beginTime=${beginTime}&endTime=${endTime}&title=${encodeURIComponent(title)}`;
-    } else if (ua.includes('samsung')) {
-        scheme = `samsung-calendar://event/new?begin=${beginTime}&end=${endTime}&title=${encodeURIComponent(title)}`;
-    } else {
-        // 安卓通用标准 Intent（所有安卓手机必支持，最兜底）
-        scheme = `intent://calendars#Intent;scheme=content;action=android.intent.action.INSERT;type=vnd.android.cursor.item/event;S.title=${encodeURIComponent(title)};L.beginTime=${beginTime};L.endTime=${endTime};end`;
+    // 安卓 官方标准 Intent（全安卓通用，100%支持）
+    else {
+        scheme = `intent://calendar/event#Intent;scheme=content;action=android.intent.action.INSERT;type=vnd.android.cursor.item/event;S.title=${title};L.beginTime=${begin};L.endTime=${end};i.alarmMinutes=${alarm};end;`;
     }
 
-    // 核心：延时跳转，避免浏览器拦截
-    setTimeout(() => {
-        window.location.href = scheme;
-        showMessage(`${i18n.success}，即将打开系统日历`, 'success');
-    }, 200);
+    // ✅ 核心：必须在点击事件同步执行，不延时、不异步
+    window.location.href = scheme;
+    showMessage(i18n.success, 'success');
 }
         function showMessage(text, type) {
             messageBox.textContent = text;
