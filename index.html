@@ -193,7 +193,7 @@
     </div>
 
     <script>
-        // ==================== 多语言配置 ====================
+        // ==================== 多语言 ====================
         const isEnglish = navigator.language.toLowerCase().includes('en');
         const i18n = {
             pageTitle: isEnglish ? 'Filter Replacement Reminder' : '滤芯更换提醒',
@@ -201,7 +201,7 @@
             formTitle: isEnglish ? 'Set Reminder' : '设置换芯提醒',
             installDate: isEnglish ? 'Install Date' : '安装日期',
             expireDate: isEnglish ? 'Expiration Date' : '预计更换日期',
-            remindDays: isEnglish ? 'Remind Before (Optional,1-30 days)' : '提前提醒天数（可选，1-30天）',
+            remindDays: isEnglish ? 'Remind Before (1-30 days)' : '提前提醒天数（可选，1-30天）',
             email: isEnglish ? 'Email (Optional)' : '接收邮箱（可选）',
             emailPlaceholder: isEnglish ? 'Receive email alerts' : '填写后可同步接收邮件提醒',
             confirmBtn: isEnglish ? 'Set Reminder' : '确认设置提醒',
@@ -229,15 +229,15 @@
             opt.textContent = isEnglish ? opt.dataset.en : opt.dataset.cn;
         });
 
-        // ==================== 工具函数 ====================
+        // ==================== 工具 ====================
         const formatDate = (date) => {
-            const year = date.getFullYear();
-            const month = String(date.getMonth() + 1).padStart(2, '0');
-            const day = String(date.getDate()).padStart(2, '0');
-            return `${year}/${month}/${day}`;
+            const y = date.getFullYear();
+            const m = String(date.getMonth() + 1).padStart(2, '0');
+            const d = String(date.getDate()).padStart(2, '0');
+            return `${y}/${m}/${d}`;
         };
 
-        // ==================== DOM元素 ====================
+        // ==================== DOM ====================
         const confirmBtn = document.getElementById('confirmBtn');
         const installDateInput = document.getElementById('installDate');
         const remindDateDisplay = document.getElementById('remindDateDisplay');
@@ -256,7 +256,7 @@
             installDateInput.dispatchEvent(new Event('change'));
         }
 
-        // ==================== 日期选择监听 ====================
+        // ==================== 日期选择 ====================
         installDateInput.addEventListener('change', function () {
             const val = this.value;
             messageBox.className = 'message';
@@ -275,7 +275,7 @@
 
             const today = new Date();
             const todayOnly = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-            const remindOnly = new Date(remindDate.getFullYear(), remindDate.getMonth(), remindOnly.getDate());
+            const remindOnly = new Date(remindDate.getFullYear(), remindDate.getMonth(), remindDate.getDate());
 
             if (remindOnly <= todayOnly) {
                 remindDateDisplay.textContent = formatDate(remindDate);
@@ -290,14 +290,19 @@
             window.remindDate = remindDate;
         });
 
-        // ==================== 核心：无下载、无弹窗 ====================
+        // ==================== 核心：唤起日历（无弹窗） ====================
         function setReminder() {
             const remindDate = window.remindDate;
-            const remindDays = parseInt(remindDaysSelect.value);
             const email = userEmailInput.value.trim();
 
-            if (!remindDate) { showMessage(i18n.errorDate, 'error'); return; }
-            if (email && !validateEmail(email)) { showMessage(i18n.errorEmail, 'error'); return; }
+            if (!remindDate) {
+                showMessage(i18n.selectDate, 'error');
+                return;
+            }
+            if (email && !validateEmail(email)) {
+                showMessage(i18n.errorEmail, 'error');
+                return;
+            }
 
             if (isWechatBrowser()) {
                 wechatTip.innerText = i18n.wechatTip;
@@ -310,29 +315,45 @@
             const d = String(remindDate.getDate()).padStart(2, '0');
             const title = isEnglish ? "Filter Replacement" : "滤芯更换提醒";
 
-            // -------------------- iOS 原生协议（无下载） --------------------
+            // iOS
             if (isIOS()) {
                 window.location.href = `calshow:${y}-${m}-${d}?title=${encodeURIComponent(title)}`;
                 showMessage(`${i18n.success}：${formatDate(remindDate)}`, 'success');
                 return;
             }
 
-            // -------------------- 安卓 直接打开（无下载） --------------------
-            window.location.href = `content://com.android.calendar/events?title=${encodeURIComponent(title)}&dtstart=${remindDate.getTime()}`;
+            // Android
+            try {
+                const ics = `BEGIN:VCALENDAR
+VERSION:2.0
+BEGIN:VEVENT
+DTSTART:${y}${m}${d}T090000
+DTEND:${y}${m}${d}T100000
+SUMMARY:${title}
+END:VEVENT
+END:VCALENDAR`;
+                const blob = new Blob([ics], { type: 'text/calendar' });
+                const url = URL.createObjectURL(blob);
+                window.location.href = url;
+                setTimeout(() => URL.revokeObjectURL(url), 100);
+            } catch (e) {}
+
             showMessage(`${i18n.success}：${formatDate(remindDate)}`, 'success');
         }
 
-        // ==================== 设备判断 ====================
+        // ==================== 工具判断 ====================
         function isWechatBrowser() { return navigator.userAgent.toLowerCase().includes('micromessenger'); }
-        function isIOS() { const ua = navigator.userAgent.toLowerCase(); return /iphone|ipad|ipod/.test(ua); }
+        function isIOS() { return /iphone|ipad|ipod/.test(navigator.userAgent.toLowerCase()); }
         function validateEmail(e) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e); }
 
-        // ==================== 提示永久显示 ====================
+        // ==================== 提示 ====================
         function showMessage(text, type) {
             messageBox.textContent = text;
             messageBox.className = `message ${type}`;
             wechatTip.style.display = 'none';
-            if (type === 'error') setTimeout(() => messageBox.className = 'message', 4000);
+            if (type === 'error') {
+                setTimeout(() => messageBox.className = 'message', 4000);
+            }
         }
 
         window.onload = initDefaultDate;
