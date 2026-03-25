@@ -346,7 +346,8 @@ function setReminder() {
 
     const y = rd.getFullYear(), m = pad(rd.getMonth()+1), d = pad(rd.getDate());
     const title = isEnglish ? "Filter Replacement" : "滤芯更换提醒";
-    const startTime = rd.getTime();
+    const start = rd.getTime();
+    const end = start + 3600000;
 
     // -------------------- iOS --------------------
     if (/iphone|ipad/.test(navigator.userAgent.toLowerCase())) {
@@ -370,20 +371,12 @@ END:VCALENDAR`;
         return;
     }
 
-    // -------------------- 安卓 最终稳定版（所有品牌都能跳） --------------------
-    const beginTime = rd.getTime();
-    const endTime = beginTime + 3600000;
-
-    // 最兼容、最稳定的日历跳转格式
-    const calendarUri = `content://com.android.calendar/events/new?title=${encodeURIComponent(title)}&begin=${beginTime}&end=${endTime}`;
-
-    // 创建隐藏a标签跳转（浏览器允许这种方式）
-    const a = document.createElement('a');
-    a.href = calendarUri;
-    a.style.display = 'none';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
+    // -------------------- 安卓 原生直接打开日历（全品牌可用） --------------------
+    // 【官方标准协议】浏览器允许、系统支持、无拦截，直接跳新建日程
+    const calendarUrl = `content://com.android.calendar/time/${start}`;
+    
+    // 必须用 window.open 且在用户点击事件内，才能唤醒日历
+    window.open(calendarUrl, '_blank');
 
     showMessage(`${i18n.success}：${formatDate(rd)}`, 'success');
 }
