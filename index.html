@@ -346,10 +346,8 @@ function setReminder() {
 
     const y = rd.getFullYear(), m = pad(rd.getMonth()+1), d = pad(rd.getDate());
     const title = isEnglish ? "Filter Replacement" : "滤芯更换提醒";
-    const start = rd.getTime();
-    const end = start + 3600000;
 
-    // -------------------- iOS --------------------
+    // iOS 正常
     if (/iphone|ipad/.test(navigator.userAgent.toLowerCase())) {
         const ics = `BEGIN:VCALENDAR
 VERSION:2.0
@@ -371,14 +369,20 @@ END:VCALENDAR`;
         return;
     }
 
-    // -------------------- 安卓 原生直接打开日历（全品牌可用） --------------------
-    // 【官方标准协议】浏览器允许、系统支持、无拦截，直接跳新建日程
-    const calendarUrl = `content://com.android.calendar/time/${start}`;
-    
-    // 必须用 window.open 且在用户点击事件内，才能唤醒日历
-    window.open(calendarUrl, '_blank');
+    // ==================== 安卓 最终可用方案 ====================
+    // 系统允许跳转 → 自动弹窗打开日历
+    const calendarUrl = `https://calendar.google.com/calendar/r/eventedit?text=${encodeURIComponent(title)}&dates=${y}${m}${d}/${y}${m}${d}`;
+  
+    // 最稳定跳转方式
+    const a = document.createElement('a');
+    a.setAttribute('href', calendarUrl);
+    a.setAttribute('target', '_blank');
+    a.style.display = 'none';
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => document.body.removeChild(a), 100);
 
-    showMessage(`${i18n.success}：${formatDate(rd)}`, 'success');
+    showMessage(`请选择日历APP打开，自动新建日程`, 'success');
 }
         function showMessage(text, type) {
             messageBox.textContent = text;
