@@ -80,6 +80,7 @@
             transition: border 0.3s;
         }
 
+        /* 新增：邮箱后缀下拉框样式 */
         .email-suggest {
             position: absolute;
             width: 100%;
@@ -208,8 +209,10 @@
 
             <div class="form-group">
                 <label id="labelEmail" for="userEmail">接收邮箱（可选）</label>
+                <!-- 包裹层用于定位下拉框 -->
                 <div class="email-wrapper">
                     <input type="email" id="userEmail" placeholder="填写后可同步接收邮件提醒">
+                    <!-- 新增：邮箱后缀选择容器 -->
                     <div id="emailSuggest" class="email-suggest"></div>
                 </div>
             </div>
@@ -222,6 +225,7 @@
     </div>
 
     <script>
+        // 多语言
         const isEnglish = navigator.language.toLowerCase().includes('en');
         const i18n = {
             pageTitle: isEnglish ? 'Filter Replacement Reminder' : '滤芯更换提醒',
@@ -241,6 +245,7 @@
             errorEmail: isEnglish ? 'Invalid email' : '邮箱格式错误'
         };
 
+        // 应用语言
         document.getElementById('pageTitle').innerText = i18n.pageTitle;
         document.getElementById('pageDesc').innerText = i18n.pageDesc;
         document.getElementById('formTitle').innerText = i18n.formTitle;
@@ -252,18 +257,15 @@
         document.getElementById('confirmBtn').innerText = i18n.confirmBtn;
         document.getElementById('remindDateDisplay').innerText = i18n.selectDate;
 
+        // 下拉框语言
         const sel = document.getElementById('remindDays');
         Array.from(sel.options).forEach(o => o.textContent = isEnglish ? o.dataset.en : o.dataset.cn);
 
-        const formatDate = d => {
-          if (isEnglish) {
-            return `${pad(d.getMonth() + 1)}/${pad(d.getDate())}/${d.getFullYear()}`;
-          } else {
-            return `${d.getFullYear()}/${pad(d.getMonth()+1)}/${pad(d.getDate())}`;
-          }
-        };
+        // 工具
+        const formatDate = d => `${d.getFullYear()}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')}`;
         const pad = n => String(n).padStart(2, '0');
 
+        // DOM
         const confirmBtn = document.getElementById('confirmBtn');
         const installDateInput = document.getElementById('installDate');
         const remindDateDisplay = document.getElementById('remindDateDisplay');
@@ -271,15 +273,19 @@
         const wechatTip = document.getElementById('wechatTip');
         const userEmailInput = document.getElementById('userEmail');
         const remindDaysSelect = document.getElementById('remindDays');
+        // 新增：邮箱后缀DOM
         const emailSuggest = document.getElementById('emailSuggest');
-        const commonDomains = ['gmail.com','googlemail.com','yahoo.com','hotmail.com','outlook.com','icloud.com','qq.com','163.com','126.com','sina.com','sohu.com'];
+        // 国际通用邮箱后缀
+        const commonDomains = ['gmail.com', 'googlemail.com' , 'yahoo.com', 'hotmail.com', 'outlook.com', 'icloud.com', 'qq.com', '163.com', '126.com', 'sina.com', 'sohu.com'];
 
+        // 初始化
         function initDefaultDate() {
             const d = new Date();
             installDateInput.value = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
             installDateInput.dispatchEvent(new Event('change'));
         }
 
+        // 日期选择
         installDateInput.addEventListener('change', function () {
             const val = this.value;
             messageBox.className = 'message';
@@ -313,6 +319,7 @@
             window.remindDate = expire;
         });
 
+        // ====================== 新增：邮箱@自动提示后缀 ======================
         userEmailInput.addEventListener('input', function(e) {
             const val = this.value;
             const atIndex = val.indexOf('@');
@@ -334,59 +341,64 @@
                 emailSuggest.style.display = 'none';
             }
         });
+        // 点击页面其他地方关闭下拉框
         document.addEventListener('click', function(e) {
             if (!e.target.closest('.email-wrapper')) {
                 emailSuggest.style.display = 'none';
             }
         });
 
-// ====================== 最终完美方案：安卓主流厂商日历 DeepLink 直达 ======================
-// ====================== 终极版 DeepLink 唤起日历（100%能唤起） ======================
+// 核心：日历唤起（iOS + Android 都能自动创建事件）
 function setReminder() {
     const rd = window.remindDate;
     const email = userEmailInput.value.trim();
     const days = parseInt(remindDaysSelect.value);
 
-    // 校验
-    if (!rd) {
-        showMessage(i18n.selectDate, 'error');
+    if (!rd) { showMessage(i18n.selectDate, 'error'); return; }
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { showMessage(i18n.errorEmail, 'error'); return; }
+    if (navigator.userAgent.toLowerCase().includes('micromessenger')) { wechatTip.innerText = i18n.wechatTip; wechatTip.style.display = 'block'; return; }
+
+    const y = rd.getFullYear(), m = pad(rd.getMonth()+1), d = pad(rd.getDate());
+    const title = isEnglish ? "Filter Replacement" : "滤芯更换提醒";
+    const startTime = rd.getTime();
+
+    // -------------------- iOS --------------------
+    if (/iphone|ipad/.test(navigator.userAgent.toLowerCase())) {
+        const ics = `BEGIN:VCALENDAR
+VERSION:2.0
+BEGIN:VEVENT
+UID:${Date.now()}
+DTSTART:${y}${m}${d}T090000
+DTEND:${y}${m}${d}T100000
+SUMMARY:${title}
+BEGIN:VALARM
+TRIGGER:-P${days}D
+END:VALARM
+END:VEVENT
+END:VCALENDAR`;
+        const blob = new Blob([ics], { type: 'text/calendar' });
+        const url = URL.createObjectURL(blob);
+        window.location.href = url;
+        setTimeout(() => URL.revokeObjectURL(url), 500);
+        showMessage(`${i18n.success}：${formatDate(rd)}`, 'success');
         return;
     }
-    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-        showMessage(i18n.errorEmail, 'error');
-        return;
-    }
 
-    const ua = navigator.userAgent.toLowerCase();
-    if (ua.includes('micromessenger')) {
-        wechatTip.innerText = i18n.wechatTip;
-        wechatTip.style.display = 'block';
-        return;
-    }
+    // -------------------- 安卓优化方案：通用系统日历Intent（不下载ics） --------------------
+    const startMillis = rd.getTime();
+    const endMillis = startMillis + 3600000; // 持续1小时
+    const intentUri = `intent://calendar/event?action=INSERT&title=${encodeURIComponent(title)}&begin=${startMillis}&end=${endMillis}#Intent;scheme=content;type=vnd.android.cursor.item/event;end;`;
+    
+    const a = document.createElement('a');
+    a.href = intentUri;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
 
-    const title = encodeURIComponent(isEnglish ? "Filter Replacement" : "滤芯更换提醒");
-    const begin = rd.getTime();
-    const end = begin + 3600 * 1000;
-    const alarm = days * 24 * 60;
-
-    // ==========================================
-    // 终极方案：用户点击 同步执行 双scheme兜底
-    // ==========================================
-    let scheme = '';
-
-    // iOS
-    if (/iphone|ipad/.test(ua)) {
-        scheme = `calshow:${begin}`;
-    }
-    // 安卓 官方标准 Intent（全安卓通用，100%支持）
-    else {
-        scheme = `intent://calendar/event#Intent;scheme=content;action=android.intent.action.INSERT;type=vnd.android.cursor.item/event;S.title=${title};L.beginTime=${begin};L.endTime=${end};i.alarmMinutes=${alarm};end;`;
-    }
-
-    // ✅ 核心：必须在点击事件同步执行，不延时、不异步
-    window.location.href = scheme;
-    showMessage(i18n.success, 'success');
+    showMessage(`${i18n.success}：${formatDate(rd)}`, 'success');
 }
+
+        // 提示
         function showMessage(text, type) {
             messageBox.textContent = text;
             messageBox.className = `message ${type}`;
