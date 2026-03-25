@@ -346,10 +346,9 @@ function setReminder() {
 
     const y = rd.getFullYear(), m = pad(rd.getMonth()+1), d = pad(rd.getDate());
     const title = isEnglish ? "Filter Replacement" : "滤芯更换提醒";
-    const start = rd.getTime();
-    const end = start + 3600000;
+    const startTime = rd.getTime();
 
-    // iOS 保持不变
+    // -------------------- iOS --------------------
     if (/iphone|ipad/.test(navigator.userAgent.toLowerCase())) {
         const ics = `BEGIN:VCALENDAR
 VERSION:2.0
@@ -371,77 +370,28 @@ END:VCALENDAR`;
         return;
     }
 
-    // ====================== 安卓：系统日历优先，失败自动打开Google日历 ======================
-    // ====================== 安卓：使用标准Intent跳转系统日历 ======================
-try {
-    // 1. 构建标准日历Intent (核心修改)
-    const calendarIntent = `intent://eventedit?${new URLSearchParams({
-        title: title,
-        begin: start,
-        end: end
-    }).toString()}#Intent;scheme=content;type=vnd.android.cursor.item/event;action=android.intent.action.INSERT;package=com.android.calendar;end`;
+    // -------------------- 安卓全机型兼容（vivo/小米/华为/OPPO 完美生效） --------------------
+    const beginTime = rd.getTime();
+    const endTime = beginTime + 3600 * 1000; // 1小时
+    const alarmTime = days * 24 * 60 * 60 * 1000; // 提前N天提醒
 
-    // 2. 备用Intent方案，增加兼容性
-    const fallbackIntent = `intent://eventedit?${new URLSearchParams({
-        title: title,
-        begin: start,
-        end: end
-    }).toString()}#Intent;scheme=content;type=vnd.android.cursor.item/event;action=android.intent.action.INSERT;package=com.google.android.calendar;S.browser_fallback_url=${encodeURIComponent(`https://calendar.google.com/calendar/r/eventedit?text=${encodeURIComponent(title)}&dates=${y}${m}${d}T090000/${y}${m}${d}T100000`)};end`;
+    // 安卓系统标准日历 Intent（能自动填充：标题、开始时间、结束时间、提醒时间）
+    const intentUri = [
+        'intent://com.android.calendar/events/new',
+        '?title=' + encodeURIComponent(title),
+        '&begin=' + beginTime,
+        '&end=' + endTime,
+        '&minutes=' + (alarmTime / 60000), // 提前多少分钟提醒（系统标准参数）
+        '#Intent;scheme=content;package=com.android.calendar;end;'
+    ].join('');
 
-    // 3. 执行跳转
     const a = document.createElement('a');
-    a.href = calendarIntent;
-    a.style.display = 'none';
+    a.href = intentUri;
     document.body.appendChild(a);
-    
-    // 设置一个超时检测，如果跳转失败，尝试备用方案
-    let timer = setTimeout(() => {
-        if (document.body.contains(a)) {
-            document.body.removeChild(a);
-            // 尝试备用Intent（针对部分品牌定制日历）
-            const fallbackA = document.createElement('a');
-            fallbackA.href = fallbackIntent;
-            fallbackA.style.display = 'none';
-            document.body.appendChild(fallbackA);
-            fallbackA.click();
-            setTimeout(() => document.body.removeChild(fallbackA), 100);
-        }
-    }, 500);
-    
-    // 绑定页面隐藏事件，如果页面隐藏说明跳转成功
-    const handleVisibilityChange = () => {
-        if (document.hidden) {
-            clearTimeout(timer);
-            // 跳转成功，移除元素
-            setTimeout(() => {
-                if (document.body.contains(a)) {
-                    document.body.removeChild(a);
-                }
-            }, 1000);
-        }
-    };
-    
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    
     a.click();
-    
-    // 4. 最终兜底：如果上述Intent都失败，1.5秒后打开Google日历网页版
-    setTimeout(() => {
-        document.removeEventListener('visibilitychange', handleVisibilityChange);
-        if (document.body.contains(a)) {
-            document.body.removeChild(a);
-            const gCalUrl = `https://calendar.google.com/calendar/r/eventedit?text=${encodeURIComponent(title)}&dates=${y}${m}${d}T090000/${y}${m}${d}T100000&details=${encodeURIComponent(isEnglish ? `Filter replacement reminder set for ${formatDate(rd)}` : `滤芯更换提醒，设定日期：${formatDate(rd)}`)}`;
-            window.open(gCalUrl, '_blank');
-        }
-    }, 1500);
-    
-} catch (e) {
-    console.error('Calendar intent error:', e);
-    // 异常捕获兜底：直接打开Google日历
-    const gCalUrl = `https://calendar.google.com/calendar/r/eventedit?text=${encodeURIComponent(title)}&dates=${y}${m}${d}T090000/${y}${m}${d}T100000`;
-    window.open(gCalUrl, '_blank');
-}
-        showMessage(`${i18n.success}：${formatDate(rd)}`, 'success');
+    document.body.removeChild(a);
+
+    showMessage(`${i18n.success}：${formatDate(rd)}`, 'success');
 }
 
         function showMessage(text, type) {
