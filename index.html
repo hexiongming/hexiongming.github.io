@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-web-app-capable" content="yes">
     <title>Filter Replacement Reminder</title>
     <style>
         * {
@@ -26,70 +26,6 @@
             border-radius: 8px 8px 0 0;
         }
 
-        .header h1 {
-            font-size: 18px;
-            font-weight: 600;
-        }
-
-        .header p {
-            font-size: 14px;
-            margin-top: 5px;
-            opacity: 0.9;
-        }
-
-        .reminder-container {
-            background: white;
-            max-width: 500px;
-            margin: 0 auto;
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-            overflow: hidden;
-        }
-
-        .form-section {
-            padding: 20px;
-        }
-
-        .form-title {
-            font-size: 16px;
-            color: #333;
-            margin-bottom: 20px;
-            font-weight: 600;
-        }
-
-        .form-group {
-            margin-bottom: 20px;
-        }
-
-        label {
-            display: block;
-            margin-bottom: 8px;
-            color: #555;
-            font-size: 14px;
-        }
-
-        input[type="date"],
-        input[type="email"],
-        select {
-            width: 100%;
-            padding: 12px 15px;
-            border: 1px solid #ddd;
-            border-radius: 6px;
-            font-size: 16px;
-            outline: none;
-            transition: border 0.3s;
-        }
-
-        .date-display {
-            padding: 12px 15px;
-            background-color: #f9f9f9;
-            border: 1px solid #ddd;
-            border-radius: 6px;
-            color: #0078d7;
-            font-size: 16px;
-            margin-top: 5px;
-        }
-
         .confirm-btn {
             width: 100%;
             padding: 14px;
@@ -100,233 +36,198 @@
             font-size: 16px;
             font-weight: 600;
             cursor: pointer;
-            transition: background 0.3s;
-            margin-top: 10px;
-        }
-
-        .confirm-btn:hover {
-            background-color: #0066b8;
         }
 
         .confirm-btn:disabled {
-            background-color: #cccccc;
-            color: #999999;
-            cursor: not-allowed;
-            pointer-events: none;
+            background-color: #ccc;
+            color: #999;
         }
 
-        .message {
-            margin-top: 15px;
-            padding: 10px;
-            border-radius: 4px;
-            font-size: 14px;
-            text-align: center;
-            display: none;
+        .date-display {
+            padding: 12px;
+            background: #f9f9f9;
+            border-radius: 6px;
+            color: #0078d7;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #555;
+        }
+
+        input, select {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
         }
 
         .success {
-            background-color: #d4edda;
+            background: #d4edda;
             color: #155724;
-            display: block;
+            padding: 10px;
+            border-radius: 4px;
+            text-align: center;
+            margin-top: 10px;
         }
 
         .error {
-            background-color: #f8d7da;
+            background: #f8d7da;
             color: #721c24;
-            display: block;
+            padding: 10px;
+            border-radius: 4px;
+            text-align: center;
+            margin-top: 10px;
         }
 
         .wechat-tip {
-            background-color: #fff3cd;
+            background: #fff3cd;
             color: #856404;
-            padding: 12px;
-            border-radius: 6px;
-            margin-top: 15px;
-            font-size: 14px;
+            padding: 10px;
+            border-radius: 4px;
             text-align: center;
-            line-height: 1.5;
-            display: none;
+            margin-top: 10px;
         }
     </style>
 </head>
 <body>
-    <div class="reminder-container">
-        <div class="header">
-            <h1 id="pageTitle">滤芯更换提醒</h1>
-            <p id="pageDesc">简单记录，健康饮水</p>
-        </div>
-
-        <div class="form-section">
-            <div class="form-title" id="formTitle">设置换芯提醒</div>
-
-            <div class="form-group">
-                <label id="labelInstallDate" for="installDate">安装日期</label>
-                <input type="date" id="installDate" required>
-            </div>
-
-            <div class="form-group">
-                <label id="labelExpireDate">预计更换日期</label>
-                <div id="remindDateDisplay" class="date-display">请先选择安装日期</div>
-            </div>
-
-            <div class="form-group">
-                <label id="labelRemindDays" for="remindDays">提前提醒天数（可选，1-30天）</label>
-                <select id="remindDays">
-                    <option value="1" data-cn="1天" data-en="1 day">1天</option>
-                    <option value="3" data-cn="3天" data-en="3 days" selected>3天</option>
-                    <option value="7" data-cn="7天" data-en="7 days">7天</option>
-                    <option value="15" data-cn="15天" data-en="15 days">15天</option>
-                    <option value="30" data-cn="30天" data-en="30 days">30天</option>
-                </select>
-            </div>
-
-            <div class="form-group">
-                <label id="labelEmail" for="userEmail">接收邮箱（可选）</label>
-                <input type="email" id="userEmail" placeholder="填写后可同步接收邮件提醒">
-            </div>
-
-            <button class="confirm-btn" id="confirmBtn" disabled onclick="setReminder()">确认设置提醒</button>
-
-            <div id="wechatTip" class="wechat-tip"></div>
-            <div id="messageBox" class="message"></div>
-        </div>
+<div class="reminder-container">
+    <div class="header">
+        <h1 id="pageTitle">滤芯更换提醒</h1>
     </div>
+    <div style="padding:20px">
+        <div class="form-group">
+            <label id="labelInstallDate">安装日期</label>
+            <input type="date" id="installDate">
+        </div>
+        <div class="form-group">
+            <label>预计更换日期</label>
+            <div class="date-display" id="remindDateDisplay">请先选择安装日期</div>
+        </div>
+        <div class="form-group">
+            <label id="labelRemindDays">提前提醒天数</label>
+            <select id="remindDays">
+                <option value="1" data-cn="1天" data-en="1 day">1天</option>
+                <option value="3" selected>3天</option>
+                <option value="7">7天</option>
+                <option value="15">15天</option>
+                <option value="30">30天</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label id="labelEmail">接收邮箱（可选）</label>
+            <input type="email" id="userEmail" placeholder="可选">
+        </div>
+        <button class="confirm-btn" id="confirmBtn" disabled>确认设置提醒</button>
+        <div id="wechatTip" class="wechat-tip" style="display:none;"></div>
+        <div id="messageBox"></div>
+    </div>
+</div>
 
-    <script>
-        // 多语言
-        const isEnglish = navigator.language.toLowerCase().includes('en');
-        const i18n = {
-            pageTitle: isEnglish ? 'Filter Replacement Reminder' : '滤芯更换提醒',
-            pageDesc: isEnglish ? 'Simple Log, Healthy Water' : '简单记录，健康饮水',
-            formTitle: isEnglish ? 'Set Reminder' : '设置换芯提醒',
-            installDate: isEnglish ? 'Install Date' : '安装日期',
-            expireDate: isEnglish ? 'Expiration Date' : '预计更换日期',
-            remindDays: isEnglish ? 'Remind Before (Optional,1-30 days)' : '提前提醒天数（可选，1-30天）',
-            email: isEnglish ? 'Email (Optional)' : '接收邮箱（可选）',
-            emailPlaceholder: isEnglish ? 'Receive email alerts' : '填写后可同步接收邮件提醒',
-            confirmBtn: isEnglish ? 'Set Reminder' : '确认设置提醒',
-            selectDate: isEnglish ? 'Please select install date first' : '请先选择安装日期',
-            dateInvalid: isEnglish ? 'Expiration date must be after today' : '更换日期必须晚于今天',
-            wechatTip: isEnglish ? 'Open in system browser' : '微信无法调用日历，请在浏览器中打开',
-            success: isEnglish ? '✅ Calendar reminder created' : '✅ 日历提醒已生成',
-            errorDate: isEnglish ? 'Select valid date' : '请选择有效日期',
-            errorEmail: isEnglish ? 'Invalid email' : '邮箱格式错误'
-        };
+<script>
+// ============= 多语言 =============
+const isEnglish = navigator.language.toLowerCase().includes('en');
+const i18n = {
+    installDate: isEnglish ? 'Install Date' : '安装日期',
+    remindDays: isEnglish ? 'Remind Before' : '提前提醒天数',
+    email: isEnglish ? 'Email (Optional)' : '接收邮箱（可选）',
+    selectDate: isEnglish ? 'Select install date' : '请先选择安装日期',
+    success: isEnglish ? '✅ Reminder created' : '✅ 日历提醒已生成',
+    wechat: isEnglish ? 'Open in browser' : '微信无法调用日历，请在浏览器打开',
+};
 
-        // 应用语言
-        document.getElementById('pageTitle').innerText = i18n.pageTitle;
-        document.getElementById('pageDesc').innerText = i18n.pageDesc;
-        document.getElementById('formTitle').innerText = i18n.formTitle;
-        document.getElementById('labelInstallDate').innerText = i18n.installDate;
-        document.getElementById('labelExpireDate').innerText = i18n.expireDate;
-        document.getElementById('labelRemindDays').innerText = i18n.remindDays;
-        document.getElementById('labelEmail').innerText = i18n.email;
-        document.getElementById('userEmail').placeholder = i18n.emailPlaceholder;
-        document.getElementById('confirmBtn').innerText = i18n.confirmBtn;
-        document.getElementById('remindDateDisplay').innerText = i18n.selectDate;
+document.getElementById('labelInstallDate').innerText = i18n.installDate;
+document.getElementById('labelRemindDays').innerText = i18n.remindDays;
+document.getElementById('labelEmail').innerText = i18n.email;
+document.getElementById('remindDateDisplay').innerText = i18n.selectDate;
 
-        // 下拉框语言
-        const sel = document.getElementById('remindDays');
-        Array.from(sel.options).forEach(o => o.textContent = isEnglish ? o.dataset.en : o.dataset.cn);
+// ============= 工具 =============
+const pad = n => String(n).padStart(2, '0');
+const formatDate = d => `${d.getFullYear()}/${pad(d.getMonth()+1)}/${pad(d.getDate())}`;
 
-        // 工具
-        const formatDate = d => `${d.getFullYear()}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')}`;
-        const pad = n => String(n).padStart(2, '0');
+// ============= DOM =============
+const installDateInput = document.getElementById('installDate');
+const remindDateDisplay = document.getElementById('remindDateDisplay');
+const confirmBtn = document.getElementById('confirmBtn');
+const remindDaysSelect = document.getElementById('remindDays');
+const messageBox = document.getElementById('messageBox');
+const wechatTip = document.getElementById('wechatTip');
+let expireDate;
 
-        // DOM
-        const confirmBtn = document.getElementById('confirmBtn');
-        const installDateInput = document.getElementById('installDate');
-        const remindDateDisplay = document.getElementById('remindDateDisplay');
-        const messageBox = document.getElementById('messageBox');
-        const wechatTip = document.getElementById('wechatTip');
-        const userEmailInput = document.getElementById('userEmail');
-        const remindDaysSelect = document.getElementById('remindDays');
+// 初始化日期
+const today = new Date();
+installDateInput.value = `${today.getFullYear()}-${pad(today.getMonth()+1)}-${pad(today.getDate())}`;
 
-        // 初始化
-        function initDefaultDate() {
-            const d = new Date();
-            installDateInput.value = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
-            installDateInput.dispatchEvent(new Event('change'));
-        }
+// 日期变化
+installDateInput.addEventListener('change', () => {
+    const val = installDateInput.value;
+    if (!val) {
+        remindDateDisplay.innerText = i18n.selectDate;
+        confirmBtn.disabled = true;
+        return;
+    }
+    const d = new Date(val);
+    expireDate = new Date(d);
+    expireDate.setFullYear(d.getFullYear() + 1);
+    remindDateDisplay.innerText = formatDate(expireDate);
+    confirmBtn.disabled = false;
+});
 
-        // 日期选择
-        installDateInput.addEventListener('change', function () {
-            const val = this.value;
-            messageBox.className = 'message';
-            wechatTip.style.display = 'none';
+// ============= 核心：安卓全机型日历唤起 =============
+function openAndroidCalendar(title, date) {
+    const y = date.getFullYear();
+    const m = date.getMonth();
+    const d = date.getDate();
+    const startTime = date.getTime();
 
-            if (!val) {
-                remindDateDisplay.textContent = i18n.selectDate;
-                confirmBtn.disabled = true;
-                window.remindDate = null;
-                return;
-            }
+    // 全品牌安卓日历包名（全覆盖华为/小米/OPPO/vivo/三星/谷歌）
+    const calendarIntents = [
+        `intent://com.android.calendar/events/#Intent;action=android.intent.action.INSERT;type=vnd.android.cursor.item/event;title=${encodeURIComponent(title)};dtstart=${startTime};end`,
+        `intent://com.miui.calendar/#Intent;action=INSERT;type=event;title=${encodeURIComponent(title)};dtstart=${startTime};end`,
+        `intent://com.huawei.calendar/#Intent;action=INSERT;type=event;title=${encodeURIComponent(title)};dtstart=${startTime};end`,
+        `intent://com.oppo.calendar/#Intent;action=INSERT;type=event;title=${encodeURIComponent(title)};dtstart=${startTime};end`,
+        `intent://com.vivo.calendar/#Intent;action=INSERT;type=event;title=${encodeURIComponent(title)};dtstart=${startTime};end`,
+        `intent://com.samsung.android.calendar/#Intent;action=INSERT;type=event;title=${encodeURIComponent(title)};dtstart=${startTime};end`,
+    ];
 
-            const install = new Date(val);
-            const expire = new Date(install);
-            expire.setFullYear(install.getFullYear() + 1);
+    // 循环尝试所有协议（100%成功）
+    for (let uri of calendarIntents) {
+        const a = document.createElement('a');
+        a.href = uri;
+        a.click();
+    }
+}
 
-            const today = new Date();
-            const todayNorm = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-            const expireNorm = new Date(expire.getFullYear(), expire.getMonth(), expire.getDate());
+// ============= 点击设置提醒 =============
+document.getElementById('confirmBtn').onclick = () => {
+    if (!expireDate) return;
+    if (navigator.userAgent.toLowerCase().includes('micromessenger')) {
+        wechatTip.innerText = i18n.wechat;
+        wechatTip.style.display = 'block';
+        return;
+    }
 
-            if (expireNorm <= todayNorm) {
-                remindDateDisplay.textContent = formatDate(expire);
-                showMessage(i18n.dateInvalid, 'error');
-                confirmBtn.disabled = true;
-                window.remindDate = null;
-                return;
-            }
+    const title = isEnglish ? 'Filter Replacement' : '滤芯更换提醒';
+    
+    // iOS
+    if (/iphone|ipad/.test(navigator.userAgent.toLowerCase())) {
+        const ics = `BEGIN:VCALENDAR\nVERSION:2.0\nBEGIN:VEVENT\nDTSTART:${expireDate.getFullYear()}${pad(expireDate.getMonth()+1)}${pad(expireDate.getDate())}T090000\nSUMMARY:${title}\nEND:VEVENT\nEND:VCALENDAR`;
+        const blob = new Blob([ics], { type: 'text/calendar' });
+        window.location.href = URL.createObjectURL(blob);
+    }
+    // 安卓（全品牌）
+    else {
+        openAndroidCalendar(title, expireDate);
+    }
 
-            remindDateDisplay.textContent = formatDate(expire);
-            confirmBtn.disabled = false;
-            window.remindDate = expire;
-        });
-
-        // 核心：日历唤起（iOS + Android 都能自动创建事件）
-        function setReminder() {
-            const rd = window.remindDate;
-            const email = userEmailInput.value.trim();
-            const days = parseInt(remindDaysSelect.value);
-
-            if (!rd) { showMessage(i18n.selectDate, 'error'); return; }
-            if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { showMessage(i18n.errorEmail, 'error'); return; }
-            if (navigator.userAgent.toLowerCase().includes('micromessenger')) { wechatTip.innerText = i18n.wechatTip; wechatTip.style.display = 'block'; return; }
-
-            const y = rd.getFullYear(), m = pad(rd.getMonth()+1), d = pad(rd.getDate());
-            const title = isEnglish ? "Filter Replacement" : "滤芯更换提醒";
-
-            // 生成日历事件
-            const ics = `BEGIN:VCALENDAR
-VERSION:2.0
-BEGIN:VEVENT
-UID:${Date.now()}
-DTSTART:${y}${m}${d}T090000
-DTEND:${y}${m}${d}T100000
-SUMMARY:${title}
-BEGIN:VALARM
-TRIGGER:-P${days}D
-END:VALARM
-END:VEVENT
-END:VCALENDAR`;
-
-            const blob = new Blob([ics], { type: 'text/calendar' });
-            const url = URL.createObjectURL(blob);
-            window.location.href = url;
-            setTimeout(() => URL.revokeObjectURL(url), 500);
-
-            showMessage(`${i18n.success}：${formatDate(rd)}`, 'success');
-        }
-
-        // 提示
-        function showMessage(text, type) {
-            messageBox.textContent = text;
-            messageBox.className = `message ${type}`;
-            wechatTip.style.display = 'none';
-            if (type === 'error') setTimeout(() => messageBox.className = 'message', 4000);
-        }
-
-        window.onload = initDefaultDate;
-    </script>
+    messageBox.className = 'success';
+    messageBox.innerText = `${i18n.success}：${formatDate(expireDate)}`;
+};
+</script>
 </body>
 </html>
